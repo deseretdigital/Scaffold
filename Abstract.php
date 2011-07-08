@@ -445,15 +445,119 @@ abstract class DDM_Scaffold_Abstract {
 	}
 	
 	/**
+	 * Returns the label for a column
+	 *
+	 * @param array $column
+	 * @return string $label
+	 */
+	protected function getColumnLabel($column) {
+		$label = $column['COLUMN_NAME'];
+    	$label = str_replace('_', ' ', $label);
+    	$label = ucfirst($label);
+    	return $label;
+	}
+	
+	/**
+	 * Returns the input name for a column
+	 *
+	 * @param array $table
+	 * @param array $column
+	 * @return string
+	 */
+	protected function getColumnInputName($table, $column) {
+		return lcfirst($table['classNamePartial']) . '[' . $column['COLUMN_NAME'] . ']'
+	}
+	
+	/**
 	 * Returns the maxLength to use for a column
 	 *
 	 * @param array $column
 	 * @return string
 	 */
 	protected function getColumnMaxLength($column) {
+		$maxlength = null;
+		
 		if(!empty($column['CHARACTER_MAXIMUM_LENGTH'])) {
-			return $column['CHARACTER_MAXIMUM_LENGTH'];
+			$maxlength = $column['CHARACTER_MAXIMUM_LENGTH'];
+		} else if(!empty($column['NUMERIC_PRECISION'])) {
+			$maxlength = $column['NUMERIC_PRECISION'];
+			// Signed fields should allow for a negative symbol
+			if(strpos($column['COLUMN_TYPE'], 'unsigned') === false) {
+				++$maxlength;
+			}
+			// Numbers that can have decimals need to allow for a decimal symbol
+			if(in_array($column['DATA_TYPE'], array('float', 'double', 'decimal'))) {
+				++$maxlength;
+			}
+		} else if($this->isColumnTimeRelated($column)) {
+			// Dates can be written in so many formats, just allow for 50 characters. 30 September 2011 HH:MM:SS aa
+			$maxlength = 50;
+			if($column['DATE_TYPE'] == 'year') {
+				$maxlength = 4;
+			} else if($column['DATE_TYPE'] == 'time') {
+				// Allow for HH:MM:SS aa
+				$maxlength = 11;
+			}
 		}
+		
+		return $maxlength;
+	}
+	
+	/**
+	 * Retursn the form element to be used with the column
+	 *
+	 * @param array $column
+	 * @return string
+	 */
+	protected function getColumnFormElement($column) {
+		$element = 'Zend_Form_Element_Text';
+		
+		if(strpos($column['EXTRA'], 'auto_increment') !== false) {
+			$element = 'Zend_Form_Element_Hidden';
+		} else if(strpos($column['COLUMN_COMMENT'], 'BOOLEAN') !== false) {
+			$element = 'Zend_Form_Element_Checkbox';
+		} else if(in_array($column['DATA_TYPE'], array('text', 'tinytext', 'mediumtext', 'longtext'))) {
+			$element = 'Zend_Form_Element_Textarea';
+		} else if($column['DATA_TYPE'] == 'varchar' && $column['CHARACTER_MAXIMUM_LENGTH'] <= 5-) {
+			$element = 'Zend_Form_Element_Textarea';
+		} else if($column['DATA_TYPE'] == 'enum') {
+			$element = 'Zend_Form_Element_Select';
+		} else if($column['DATA_TYPE'] == 'date') {
+			$element = 'ZendX_JQuery_Form_Element_DatePicker';
+		} else if($column['DATA_TYPE'] == 'datetime') {
+			$element = 'ZendX_JQuery_Form_Element_DateTimePicker';
+		} else if($column['DATA_TYPE'] == 'time') {
+			$element = 'ZendX_JQuery_Form_Element_TimePicker';
+		} else if($column['DATA_TYPE'] == 'timestamp') {
+			$element = 'Zend_Form_Element_Hidden';
+		}
+		
+		return $element;
+	}
+	
+	/**
+	 * Returns the validators to be used with the column
+	 *
+	 * @param array $column
+	 * @return array $validators
+	 */
+	protected function getColumnValidators($column) {
+		$validators = array();
+		
+		return $validators;
+	}
+	
+	/**
+	 * Returns the filters to be used with the column
+	 *
+	 * @param array $column
+	 * @return array $filters
+	 */
+	protected function getColumnFilters($column) {
+		$filters = array();
+		$filters[] = 'StringTrim';
+		
+		return $filters;
 	}
 
 	/**
