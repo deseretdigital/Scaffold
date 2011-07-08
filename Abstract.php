@@ -518,7 +518,7 @@ abstract class DDM_Scaffold_Abstract {
 			$element = 'Zend_Form_Element_Checkbox';
 		} else if(in_array($column['DATA_TYPE'], array('text', 'tinytext', 'mediumtext', 'longtext'))) {
 			$element = 'Zend_Form_Element_Textarea';
-		} else if($column['DATA_TYPE'] == 'varchar' && $column['CHARACTER_MAXIMUM_LENGTH'] <= 5-) {
+		} else if($column['DATA_TYPE'] == 'varchar' && $column['CHARACTER_MAXIMUM_LENGTH'] <= 50) {
 			$element = 'Zend_Form_Element_Textarea';
 		} else if($column['DATA_TYPE'] == 'enum') {
 			$element = 'Zend_Form_Element_Select';
