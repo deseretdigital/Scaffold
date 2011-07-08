@@ -1340,11 +1340,61 @@ return strtolower($this->_columnNameFilter->filter($columnName));
 		$baseMethods = array();
 		
 		foreach($table['COLUMNS'] as $column) {
-			$inputName = lcfirst($table['classNamePartial']) . '[' . $column['COLUMN_NAME'] . ']';
-			$validators = array();
-			$label = null;
+			$label = $this->getColumnLabel($column);
+			$inputName = $this->getColumnInputName($table, $column);
+			$variableName = preg_replace('/[^\w_]/', '', $inputName);
+			$element = $this->getColumnFormElement($column);
 			$maxLength = $this->getColumnMaxLength($column);
+			$validators = $this->getColumnValidators($column);
+			$filters = $this->getColumnFilters($column);
+			
+			$inputOptions = array();
+			$inputAttributes = array();
+			
+			if(count($validators)) {
+				$inputOptions['validators'] = $validators;
+			}
+			if(count($filters)) {
+				$inputOptions['filters'] = $filters;
+			}
+			if($label !== false) {
+				$inputOptions['label'] = $label;
+			}
+			if(!empty($maxLength)) {
+				$inputAttributes['maxlength'] = $maxLength;
+			}
+			$inputOptions = $this->convertToPhpCodeString($inputOptions);
+
+			$codeCreateElements .= "\$$variableName = new $element( '$inputName',\n\t$inputOptions\n);";
+			if(count($inputAttributes)) {
+				foreach($inputAttributes as $key => $value ) {
+					$codeCreateElements .= "\n\$$variableName" . "->setAttrib('$key', '$value');\n";
+					if($key == 'maxlength') {
+						if($value > 1000000) {
+							$value = 1000000;
+						}
+						if($this->isColumnNumeric($column)) {
+							// stringLength checks type, must be a string.
+							$codeCreateElements .= "\n\$$variableName" . "->addValidator('stringLength', false, array(0, $value));";
+						}
+					}
+				}
+			}
+
+			$codeCreateElements .= "\n\$this->addElement(\$$variableName);\n\n";
 		}
+
+		$codeCreateElements .= "\$this->addElement( \n\t'submit',\n\t'Submit');\n";
+
+		// constructor
+		$const = array(
+			'name' => '__construct',
+			'body' => "parent::__construct();\n$codeCreateElements",
+			'docblock'   => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'The constructor',
+				)),
+		);
+		$baseMethods[] = $const;
     	
 		$baseDocBlock = $baseClassName . "\n\n";
 		$baseDocBlock .= 'Generated class file for form '. $table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'] . "\n";
