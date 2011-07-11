@@ -465,7 +465,7 @@ abstract class DDM_Scaffold_Abstract {
 	 * @return string
 	 */
 	protected function getColumnInputName($table, $column) {
-		return lcfirst($table['classNamePartial']) . '[' . $column['COLUMN_NAME'] . ']'
+		return lcfirst($table['classNamePartial']) . '[' . $column['COLUMN_NAME'] . ']';
 	}
 	
 	/**
