@@ -143,6 +143,19 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
             }
     		$defaultValues[$column['COLUMN_NAME']] = $this->getDefaultColumnValue($column);
         }
+        
+        // Use the foreign key constraints to build up reference maps between the tables
+        $reference_map = array();
+        foreach($table['KEYS'] as $key) {
+        	$refTableFile = $this->paths['tables'] . $table['namespace'] . '/' . $this->makeClassName($key['REFERENCED_TABLE_NAME']);
+        	$refTableClass = $this->convertFileNameToClassName($refTableFile);
+        	$map = array(
+        		'columns' => $key['COLUMN_NAME'],
+        		'refTableClass' => $refTableClass,
+        		'refColumns' => $key['REFERENCED_COLUMN_NAME'],
+        	);
+        	$reference_map[$key['CONSTRAINT_NAME']] = $map;
+        }
 		
 		$baseProperties = array();
 		$baseProperties[] = array(
@@ -185,6 +198,13 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
         	'visibility'   => 'protected',
         	'defaultValue' => $table['PRIMARY_COLUMNS'],
         	'docblock' => 'Fields that make up the Primary Key'
+    	);
+    	
+    	$baseProperties[] = array(
+    		'name' => '_referenceMap',
+    		'visibility' => 'protected',
+    		'defaultValue' => $reference_map,
+    		'docblock' => 'Reference mapping from this table to other tables',
     	);
     	
     	$baseProperties[] = array(
