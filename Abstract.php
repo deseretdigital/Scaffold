@@ -6,6 +6,7 @@ abstract class DDM_Scaffold_Abstract {
 ** Properties
 **===============================*/
 
+	protected $config = array();
 	protected $databases = array();
 	protected $db;
 	protected $projectRoot;
@@ -36,6 +37,7 @@ abstract class DDM_Scaffold_Abstract {
 			$config['paths'] = array();
 		}
 		
+		$this->initConfig();
 		$this->initDatabases($config['databases']);
 		$this->initPaths($config['paths']);
 		$this->initDirectories();
@@ -53,21 +55,29 @@ abstract class DDM_Scaffold_Abstract {
 	}
 	
 	/**
+	 * Loads up the application.ini config
+	 *
+	 * @return void
+	 */
+	protected function initConfig() {
+		$application = new Zend_Application(
+    		APPLICATION_ENV,
+    		APPLICATION_PATH . '/configs/application.ini'
+		);
+		$this->config = $application->getOptions();
+	}
+	
+	/**
 	 * Inits the database connections
 	 *
 	 * @params array|string|null $databases
 	 * @return void
 	 */
 	protected function initDatabases($databases) {
-		$application = new Zend_Application(
-    		APPLICATION_ENV,
-    		APPLICATION_PATH . '/configs/application.ini'
-		);
-		$options = $application->getOptions();
-		$dbParams = $options['resources']['db']['params'];
+		$dbParams = $this->config['resources']['db']['params'];
 		$defaultDb = $dbParams['dbname'];
 		$dbParams['dbname'] = 'information_schema';
-		$this->db = Zend_Db::factory($options['resources']['db']['adapter'], $dbParams);
+		$this->db = Zend_Db::factory($this->config['resources']['db']['adapter'], $dbParams);
 		
 		if($databases === null && $defaultDb != '') {
 			$databases = $defaultDb;
@@ -400,6 +410,37 @@ abstract class DDM_Scaffold_Abstract {
 		return $keys;
 	}
 	
+	/**
+	 * Returns all the triggers for the specified database
+	 *
+	 * @param string $database
+	 * @param boolean $extras
+	 * @return array
+	 */
+	protected function getTriggers($database, $extras = true) {
+		$sql = '
+			SELECT
+				*
+			FROM
+				information_schema.TRIGGERS
+			WHERE
+				TRIGGER_SCHEMA = "'.$database.'"
+		';
+		$triggers = $this->db->fetchAll($sql);
+		
+		if($extras) {	
+			$ns = $this->makeNamespace($database);
+			
+			foreach($triggers as &$trigger) {
+				$trigger['namespace'] = $ns;
+				$trigger['classNamePartial'] = $this->makeClassName($trigger['TRIGGER_NAME']);
+			}
+			unset($trigger); // nuke the & from above
+		}
+		
+		return $triggers;
+	}
+	
 /*===============================
 ** Column Functions
 **===============================*/
@@ -492,9 +533,9 @@ abstract class DDM_Scaffold_Abstract {
 		} else if($this->isColumnTimeRelated($column)) {
 			// Dates can be written in so many formats, just allow for 50 characters. 30 September 2011 HH:MM:SS aa
 			$maxlength = 50;
-			if($column['DATE_TYPE'] == 'year') {
+			if($column['DATA_TYPE'] == 'year') {
 				$maxlength = 4;
-			} else if($column['DATE_TYPE'] == 'time') {
+			} else if($column['DATA_TYPE'] == 'time') {
 				// Allow for HH:MM:SS aa
 				$maxlength = 11;
 			}
