@@ -75,6 +75,9 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
 		$this->generateRows();
 		$this->generateForms();
 		$this->generateConstants();
+		$this->generateSQLDumps();
+		$this->generateTablesSQL();
+		$this->generateTriggersSQL();
 		$this->output('===Master Generator Complete===');
 	}
 	
@@ -119,7 +122,7 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
 	/**
 	 * Delegate function that does the actual work of creating the table classes
 	 *
-	 * @param string $table
+	 * @param array $table
 	 * @return boolean
 	 */
 	protected function generateTable($table) {
@@ -442,7 +445,7 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
 	/**
 	 * Delegate function that does the actual work of creating the rowset classes
 	 *
-	 * @param string $table
+	 * @param array $table
 	 * @return boolean
 	 */
 	protected function generateRowset($table) {
@@ -616,7 +619,7 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
 	/**
 	 * Delegate function that does the actual work of creating the row classes
 	 *
-	 * @param string $table
+	 * @param array $table
 	 * @return boolean
 	 */
 	protected function generateRow($table) {
@@ -1348,7 +1351,7 @@ return strtolower($this->_columnNameFilter->filter($columnName));
 	/**
 	 * Delegate function that does the actual work of creating the form classes
 	 *
-	 * @param string $table
+	 * @param array $table
 	 * @return boolean
 	 */
 	protected function generateForm($table) {
@@ -1385,7 +1388,7 @@ return strtolower($this->_columnNameFilter->filter($columnName));
 			}
 			$inputOptions = $this->convertToPhpCodeString($inputOptions);
 
-			$codeCreateElements .= "\$$variableName = new $element( '$inputName',\n\t$inputOptions\n);";
+			$codeCreateElements = "\$$variableName = new $element( '$inputName',\n\t$inputOptions\n);";
 			if(count($inputAttributes)) {
 				foreach($inputAttributes as $key => $value ) {
 					$codeCreateElements .= "\n\$$variableName" . "->setAttrib('$key', '$value');\n";
@@ -1603,5 +1606,163 @@ return strtolower($this->_columnNameFilter->filter($columnName));
 		return true;
 	}
 	
+/*===============================
+** SQL Generator
+**===============================*/
 
+	/**
+	 * Master function to create the sql dump for every databases requested
+	 *
+	 * @return void
+	 */
+	protected function generateSQLDumps() {
+		$this->output('==SQL Dumps Generator Initiated==');
+		
+		$this->createDefaultPaths(array(
+			'mysql' => 'mysql/',
+			'mysql_dumps' => 'dumps/',
+		));
+		$mysql_base_path = $this->paths['mysql'];
+		
+		$this->makeDirectory($mysql_base_path);
+		
+		foreach($this->databases as $database) {
+			$ns = $this->makeNamespace($database);
+			$this->makeDirectory($mysql_base_path . $ns);
+			$this->makeDirectory($mysql_base_path . $ns . '/' . $this->paths['mysql_dumps']);
+			
+			$results = $this->generateSQLDump($database, $ns);
+			if(!$results) {
+				$this->output('Mysql Dump could not be created for ' . $database);
+			}
+		}
+		$this->output('==SQL Dumps Generator Complete==');
+	}
+	
+	/**
+	 * Delegate function that does the actual work of creating the sql dump for each database
+	 *
+	 * @param string $database
+	 * @param string $ns
+	 * @return boolean
+	 */
+	protected function generateSQLDump($database, $ns) {
+		$this->output($database . '... ', false);
+		$file_name = $this->projectRoot . $this->paths['mysql'] . $ns . '/' . $this->paths['mysql_dumps'] . '_current.sql';
+		
+		$dbParams = $this->config['resources']['db']['params'];
+		
+		$host = '-h ' . $dbParams['host'];
+		$username = '-u ' . $dbParams['username'];
+		$password = '-p' . $dbParams['password'];
+		
+		$result = shell_exec("/usr/local/mysql/bin/mysqldump $host $username $password --no-data $database");
+		$sql = preg_replace('/ AUTO_INCREMENT=\d+/', '', $result);
+		$this->writeFile($file_name, $sql, 'sql');
+		$this->output('done');
+		return true;
+	}
+
+	/**
+	 * Master function to create the sql for all tables in every databases requested
+	 *
+	 * @return void
+	 */
+	protected function generateTablesSQL() {
+		$this->output('==Table SQL Generator Initiated==');
+		
+		$this->createDefaultPaths(array(
+			'mysql' => 'mysql/',
+			'mysql_tables' => 'tables/',
+		));
+		$mysql_base_path = $this->paths['mysql'];
+		
+		$this->makeDirectory($mysql_base_path);
+		
+		foreach($this->databases as $database) {
+			$ns = $this->makeNamespace($database);
+			$this->makeDirectory($mysql_base_path . $ns);
+			$this->makeDirectory($mysql_base_path . $ns . '/' . $this->paths['mysql_tables']);
+			
+			$tables = $this->getTables($database);
+			foreach($tables as $table) {
+				$results = $this->generateTableSQL($table);
+				if(!$results) {
+					$this->output('Table sql could not be created for ' . $database . '.' . $table['TABLE_NAME']);
+				}
+			}
+		}
+		$this->output('==Table SQL Generator Complete==');
+	}
+
+	/**
+	 * Delegate function that does the actual work of creating the sql for each table
+	 *
+	 * @param array $table
+	 * @return boolean
+	 */
+	protected function generateTableSQL($table) {
+		$this->output($table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'] . '... ', false);
+		$show_table = $this->db->query('SHOW CREATE TABLE ' . $table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'])->fetch();
+		$file_name = $this->projectRoot . $this->paths['mysql'] . $table['namespace'] . '/' . $this->paths['mysql_tables'] . $table['classNamePartial'] . '.sql';
+		$sql = preg_replace('/ AUTO_INCREMENT=\d+/', '', $show_table['Create Table']);
+		$this->writeFile($file_name, $sql, 'sql');
+		$this->output('done');
+		return true;
+	}
+	
+	/**
+	 * Master function to create the sql for all triggers in every databases requested
+	 *
+	 * @return void
+	 */
+	protected function generateTriggersSQL() {
+		$this->output('==Trigger SQL Generator Initiated==');
+		
+		$this->createDefaultPaths(array(
+			'mysql' => 'mysql/',
+			'mysql_triggers' => 'triggers/',
+		));
+		$mysql_base_path = $this->paths['mysql'];
+		
+		$this->makeDirectory($mysql_base_path);
+		
+		foreach($this->databases as $database) {
+			$ns = $this->makeNamespace($database);
+			$this->makeDirectory($mysql_base_path . $ns);
+			$this->makeDirectory($mysql_base_path . $ns . '/' . $this->paths['mysql_triggers']);
+			
+			$triggers = $this->getTriggers($database);
+			foreach($triggers as $trigger) {
+				$results = $this->generateTriggerSQL($trigger);
+				if(!$results) {
+					$this->output('Trigger sql could not be created for ' . $database . '.' . $trigger['Trigger']);
+				}
+			}
+		}
+		$this->output('==Trigger SQL Generator Complete==');
+	}
+	
+	/**
+	 * Delegate function that does the actual work of creating the sql for each trigger
+	 *
+	 * @param array $trigger
+	 * @return boolean
+	 */
+	protected function generateTriggerSQL($trigger) {
+		$this->output($trigger['TRIGGER_SCHEMA'] . '.' . $trigger['TRIGGER_NAME'] . '... ', false);
+		$file_name = $this->projectRoot . $this->paths['mysql'] . $trigger['namespace'] . '/' . $this->paths['mysql_triggers'] . $trigger['classNamePartial'] . '.sql';
+		
+		$sql = 'DELIMITER ;;' . "\n";
+		$sql .= 'DROP TRIGGER IF EXISTS ' . $trigger['TRIGGER_NAME'] . ";\n";
+		$sql .= 'CREATE TRIGGER ' . $trigger['TRIGGER_NAME'] . "\n";
+		$sql .= $trigger['ACTION_TIMING'] . ' ' . $trigger['EVENT_MANIPULATION'] . ' ON ' . $trigger['EVENT_OBJECT_TABLE'] . "\n";
+		$sql .= 'FOR EACH ROW' . "\n";
+		$sql .= $trigger['ACTION_STATEMENT'] . ";;\n\n";
+		$sql .= 'DELIMITER ;';
+		
+		$this->writeFile($file_name, $sql, 'sql');
+		$this->output('done');
+		return true;
+	}
 }
