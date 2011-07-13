@@ -366,6 +366,7 @@ abstract class DDM_Scaffold_Abstract {
 
 		// get values for enums
 		foreach( $cols as &$c ) {
+			$this->parseColumnComments($c);
 			if( $c['DATA_TYPE'] == 'enum' ) {
 				$this->parseEnumValues( $c );
 			}
@@ -373,6 +374,30 @@ abstract class DDM_Scaffold_Abstract {
 		}
 
 		return $cols;
+	}
+	
+	/**
+	 * Parse the column comments out
+	 *
+	 * @param array $column
+	 */
+	protected function parseColumnComments(&$column) {
+		$comments = array();
+		if(!empty($column['COLUMN_COMMENT'])) {
+            $comments = preg_split('/\s/',$column['COLUMN_COMMENT']);
+		}
+		$column['COMMENTS'] = $comments;
+	}
+	
+	/**
+	 * Checks to see if a column has the requested comment
+	 *
+	 * @param string $comment
+	 * @param array $column
+	 * @return boolean
+	 */
+	protected function columnHasComment($comment, $column) {
+		return in_array($comment, $column['COMMENTS']);
 	}
 
 	/**
@@ -555,7 +580,7 @@ abstract class DDM_Scaffold_Abstract {
 		
 		if(strpos($column['EXTRA'], 'auto_increment') !== false) {
 			$element = 'Zend_Form_Element_Hidden';
-		} else if(strpos($column['COLUMN_COMMENT'], 'BOOLEAN') !== false) {
+		} else if($this->columnHasComment('BOOLEAN', $column)) {
 			$element = 'Zend_Form_Element_Checkbox';
 		} else if(in_array($column['DATA_TYPE'], array('text', 'tinytext', 'mediumtext', 'longtext'))) {
 			$element = 'Zend_Form_Element_Textarea';
@@ -609,7 +634,7 @@ abstract class DDM_Scaffold_Abstract {
 	 */
 	protected function getDefaultColumnValue($column) {
 		$default_value = $column['COLUMN_DEFAULT'];
-		if(preg_match('/\bCURRENT_TIMESTAMP\b/', $column['COLUMN_COMMENT'])) {
+		if($this->columnHasComment('CURRENT_TIMESTAMP', $column)) {
 			$default_value = 'CURRENT_TIMESTAMP';
 		}
 		
@@ -634,10 +659,8 @@ abstract class DDM_Scaffold_Abstract {
 	 */
 	protected function getColumnVarType($column) {
 		$type = $this->columnTypeToVarType($column['DATA_TYPE']);
-		if(!empty($column['COLUMN_COMMENT'])) {
-			if(strpos('BOOLEAN', $column['COLUMN_COMMENT'])) {
-				$type = 'boolean';
-			}
+		if($this->columnHasComment('BOOLEAN', $column)) {
+			$type = 'boolean';
 		}
 		return $type;
 	}
