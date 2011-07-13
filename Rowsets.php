@@ -705,12 +705,12 @@ if($value == \'CURRENT_TIMESTAMP\') {
 	$value = date(\''.$dateFormat.'\', strtotime($value));
 }
 ';	
-			} else if(strpos($column['COLUMN_COMMENT'], 'SERIALIZED_DATA') !== false) {
+			} else if($this->columnHasComment('SERIALIZED_DATA', $column)) {
 				// No special logic is needed for nulls here as serialize handles it correctly
 				$autocast = false;
 				$getBody .= '$value = unserialize($value);'."\n";
 				$setBody .= '$value = serialize($value);'."\n";
-			} else if(strpos($column['COLUMN_COMMENT'], 'BOOLEAN') !== false) {
+			} else if($this->columnHasComment('BOOLEAN', $column)) {
 				$autocast = false;
 				if($column['IS_NULLABLE'] == 'YES') {
 					$getBody .= 'if($value !== null) {'."\n";
@@ -734,7 +734,7 @@ if($value === true || $value == 1 || $value === \'true\' || $value === \'TRUE\')
 				if($column['IS_NULLABLE'] == 'YES') {
 					$setBody .= '}'."\n";
 				}
-			} else if(strpos($column['COLUMN_COMMENT'], 'IP_ADDRESS') !== false) {
+			} else if($this->columnHasComment('IP_ADDRESS', $column)) {
 				$paramType = 'string';
 				$returnType = 'string';
 				$autocast = false;
