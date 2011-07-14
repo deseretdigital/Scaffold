@@ -312,7 +312,12 @@ abstract class DDM_Scaffold_Abstract {
 			FROM information_schema.TABLES
 			WHERE TABLE_SCHEMA = '$database'";
 
-		$tables = $this->db->fetchAll( $sql );
+		$result = $this->db->fetchAll( $sql );
+		// Create an array based on table name for easier referencing
+		$tables = array();
+		foreach($result as $row) {
+			$tables[$row['TABLE_NAME']] = $row;
+		}
 		
 		if($extras) {	
 			$ns = $this->makeNamespace($database);
@@ -320,9 +325,21 @@ abstract class DDM_Scaffold_Abstract {
 			foreach($tables as &$table) {
 				$table['namespace'] = $ns;
 				$table['classNamePartial'] = $this->makeClassName($table['TABLE_NAME']);
-				$table['COLUMNS'] = $this->getColumns($database, $table['TABLE_NAME']);
-				$table['KEYS'] = $this->getKeys($database, $table['TABLE_NAME']);
 				
+				$table['COLUMNS'] = $this->getColumns($database, $table['TABLE_NAME']);
+
+		        $has_auto_increment = false;
+		        foreach($table['COLUMNS'] as $column){
+		            if(strpos($column['EXTRA'], 'auto_increment') !== false) {
+		            	$has_auto_increment = true;
+		            	break;
+		            }
+		        }
+				$table['AUTO_INCREMENT'] = $has_auto_increment;
+				
+				$table['KEYS'] = $this->getKeys($database, $table['TABLE_NAME']);
+				$table['DEPENDENT_KEYS'] = array();
+							
 				// this generates a lot of stuff that we already have but in a format that Zend_Db_Table wants
 				$metadata = $this->db->describeTable($table['TABLE_NAME'], $database);
 				if(count($table['KEYS'])) {
@@ -343,6 +360,24 @@ abstract class DDM_Scaffold_Abstract {
 				$table['PRIMARY_COLUMNS'] = $primary_keys;
 			}
 			unset($table); // nuke the & from above
+			
+			//Find dependent keys
+			$dependent_keys = array();
+			foreach($tables as $table) {
+				foreach($table['KEYS'] AS $index => $key) {
+					$related_keys = $table['KEYS'];
+					unset($related_keys[$index]);
+					$key['RELATED_KEYS'] = $related_keys;
+					if(!array_key_exists($key['REFERENCED_TABLE_NAME'], $dependent_keys)) {
+						$dependent_keys[$key['REFERENCED_TABLE_NAME']] = array();
+					}
+					$dependent_keys[$key['REFERENCED_TABLE_NAME']][] = $key;
+				}
+			}
+			foreach($dependent_keys as $table => $keys) {
+				$tables[$table]['DEPENDENT_KEYS'] = $keys;
+			}
+			unset($table);  // nuke the & from above
 		}
 		
 		$this->tables[$keyName] = $tables;
