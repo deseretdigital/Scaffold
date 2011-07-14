@@ -136,14 +136,10 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
 
         // Columns
         $columns = array();
-        $has_auto_increment = false;
     	// We create a variable to pull defaults for a row class instead of information coming from the DB so we can customize the results using mysql column comments, etc
     	$defaultValues = array();
         foreach($table['COLUMNS'] as $column){
             $columns[] = $column['COLUMN_NAME'];
-            if(strpos($column['EXTRA'], 'auto_increment') !== false) {
-            	$has_auto_increment = true;
-            }
     		$defaultValues[$column['COLUMN_NAME']] = $this->getDefaultColumnValue($column);
         }
         
@@ -185,7 +181,7 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
         $baseProperties[] = array(
         	'name'         => '_sequence',
         	'visibility'   => 'protected',
-        	'defaultValue' => $has_auto_increment,
+        	'defaultValue' => $table['AUTO_INCREMENT'],
         	'docblock' => 'Does this table have an Auto Increment field?'
     	);
     	
@@ -402,6 +398,36 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
 		}
 		
 		return true;
+	}
+
+	/**
+	 * Returns the table filename for a given table
+	 *
+	 * @param string $schema
+	 * @param array $table
+	 * @return string $fileName
+	 */
+	protected function getTableFile($schema, $table) {
+		$namespace = $this->makeNamespace($schema);
+		$classname = $this->makeClassname($table);
+		$this->createDefaultPaths(array(
+			'tables' => 'Tables/',
+		));
+		$fileName = $this->projectRoot . $this->paths['application'] . $this->paths['modules'] . $this->paths['tables'] . $namespace . '/' . $classname . '.php';
+		return $fileName;
+	}
+
+	/**
+	 * Returns the table class for a given table
+	 *
+	 * @param string $schema
+	 * @param string $table
+	 * @return string $className
+	 */
+	protected function getTableClass($schema, $table) {
+		$fileName = $this->getTableFile($schema, $table);
+		$className = $this->convertFileNameToClassName($fileName, $this->paths['application'] . $this->paths['modules']);
+		return $className;
 	}
 	
 /*===============================
@@ -799,7 +825,137 @@ if($value !== null) {
 				'docblock' => $setDocblock,
 			);
 		}
-    	
+		
+		// Add convenience methods for getting relateds rows by foreign key constraints.
+		// This allows us to cache the results in the row objects
+		// !TODO: str_replace('Tables_', 'Rows_', $tableClassName) needs to be done right so if the classes have other names it still works. Applies to all key related functions
+		foreach($table['KEYS'] as $key) {
+			$variableName = '_' . $key['REFERENCED_TABLE_NAME'] . '_row_by_' . $key['COLUMN_NAME'];
+			$functionName = $this->makeClassName('get' . $variableName, false);
+			$tableClassName = $this->getTableClass($key['REFERENCED_TABLE_SCHEMA'], $key['REFERENCED_TABLE_NAME']);
+			
+			$baseProperties[] = array(
+	        	'name'         => $variableName,
+	        	'visibility'   => 'protected',
+	        	'defaultValue' => null,
+	        	'type' => $tableClassName,
+	        	'docblock' => 'Row object for ' . $key['REFERENCED_TABLE_NAME']
+	    	);
+		
+			$baseMethods[] = array(
+				'name' => $functionName,
+				'visibility' => 'public',
+				'parameters' => array(array(
+					'name' => 'select',
+					'defaultValue' => null,
+					'type' => 'Zend_Db_Select',
+				)),
+				'body' => '
+if($this->'.$variableName.' === null) {
+	$this->'.$variableName.' = $this->findParentRow(\''.$tableClassName.'\', \''.$key['CONSTRAINT_NAME'].'\', $select);
+}
+return $this->'.$variableName.';',
+				'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+	            	'shortDescription' => 'Gets the parent row from ' . $key['REFERENCED_TABLE_NAME'] . ' by ' . $key['COLUMN_NAME'],
+	                'tags' => array(
+	                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+	                        'paramName' => 'select',
+	                        'datatype'  => 'Zend_Db_Select|null',
+	                    )),
+	                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+	                        'datatype'  => str_replace('Tables_', 'Rows_', $tableClassName),
+	                    )),
+	                ),
+				)),
+			);
+		}
+		
+		// Add convenience methods for getting relateds rowsets by foreign key constraints.
+		// This allows us to cache the results in the rowset objects
+		foreach($table['DEPENDENT_KEYS'] as $key) {
+			$variableName = '_' . $key['TABLE_NAME'] . '_rowset_by_' . $key['COLUMN_NAME'];
+			$functionName = $this->makeClassName('get' . $variableName, false);
+			$tableClassName = $this->getTableClass($key['TABLE_SCHEMA'], $key['TABLE_NAME']);
+			
+			$baseProperties[] = array(
+	        	'name'         => $variableName,
+	        	'visibility'   => 'protected',
+	        	'defaultValue' => null,
+	        	'type' => $tableClassName,
+	        	'docblock' => 'Rowset object for ' . $key['TABLE_NAME']
+	    	);
+		
+			$baseMethods[] = array(
+				'name' => $functionName,
+				'visibility' => 'public',
+				'parameters' => array(array(
+					'name' => 'select',
+					'defaultValue' => null,
+					'type' => 'Zend_Db_Select',
+				)),
+				'body' => '
+if($this->'.$variableName.' === null) {
+	$this->'.$variableName.' = $this->findDependentRowset(\''.$tableClassName.'\', \''.$key['CONSTRAINT_NAME'].'\', $select);
+}
+return $this->'.$variableName.';',
+				'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+	            	'shortDescription' => 'Gets the dependent rowset from ' . $key['TABLE_NAME'] . ' by ' . $key['COLUMN_NAME'],
+	                'tags' => array(
+	                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+	                        'paramName' => 'select',
+	                        'datatype'  => 'Zend_Db_Select|null',
+	                    )),
+	                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+	                        'datatype'  => str_replace('Tables_', 'Rowsets_', $tableClassName),
+	                    )),
+	                ),
+				)),
+			);
+			
+			//Are there any many-to-many relationships we can create functions for?
+				foreach($key['RELATED_KEYS'] as $related_key) {
+				$variableName = '_' . $related_key['REFERENCED_TABLE_NAME'] . '_rowset_via_' . $related_key['TABLE_NAME'] . '_by_' . $key['COLUMN_NAME'] . '_and_' . $related_key['COLUMN_NAME'];
+				$functionName = $this->makeClassName('get' . $variableName, false);
+				$destinationTableClassName = $this->getTableClass($related_key['REFERENCED_TABLE_SCHEMA'], $related_key['REFERENCED_TABLE_NAME']);
+				$intersectionTableClassName = $this->getTableClass($related_key['TABLE_SCHEMA'], $related_key['TABLE_NAME']);
+
+				$baseProperties[] = array(
+		        	'name'         => $variableName,
+		        	'visibility'   => 'protected',
+		        	'defaultValue' => null,
+		        	'type' => $tableClassName,
+		        	'docblock' => 'Rowset object for ' . $related_key['REFERENCED_TABLE_NAME']
+		    	);
+				
+				$baseMethods[] = array(
+					'name' => $functionName,
+					'visibility' => 'public',
+					'parameters' => array(array(
+						'name' => 'select',
+						'defaultValue' => null,
+						'type' => 'Zend_Db_Select',
+					)),
+					'body' => '
+if($this->'.$variableName.' === null) {
+	$this->'.$variableName.' = $this->findManyToManyRowset(\''.$destinationTableClassName.'\', \''.$intersectionTableClassName.'\', \''.$key['CONSTRAINT_NAME'].'\', \''.$related_key['CONSTRAINT_NAME'].'\', $select);
+}
+return $this->'.$variableName.';',
+					'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+		            	'shortDescription' => 'Gets the many-to-many rowset from ' . $related_key['REFERENCED_TABLE_SCHEMA'] . ' by ' . $key['COLUMN_NAME'] . ' and by ' . $related_key['COLUMN_NAME'],
+		                'tags' => array(
+		                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+		                        'paramName' => 'select',
+		                        'datatype'  => 'Zend_Db_Select|null',
+		                    )),
+		                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+		                        'datatype'  => str_replace('Tables_', 'Rowsets_', $destinationTableClassName),
+		                    )),
+		                ),
+					)),
+				);
+			}
+		}
+		    	
 		$baseDocBlock = $baseClassName . "\n\n";
 		$baseDocBlock .= 'Generated class file for row '. $table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'] . "\n";
 		$baseDocBlock .= 'Any changes here will be overridden.';
