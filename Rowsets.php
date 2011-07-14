@@ -941,7 +941,7 @@ if($this->'.$variableName.' === null) {
 }
 return $this->'.$variableName.';',
 					'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-		            	'shortDescription' => 'Gets the many-to-many rowset from ' . $related_key['REFERENCED_TABLE_SCHEMA'] . ' by ' . $key['COLUMN_NAME'] . ' and by ' . $related_key['COLUMN_NAME'],
+		            	'shortDescription' => 'Gets the many-to-many rowset from ' . $related_key['REFERENCED_TABLE_NAME'] . ' by ' . $key['COLUMN_NAME'] . ' and by ' . $related_key['COLUMN_NAME'],
 		                'tags' => array(
 		                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
 		                        'paramName' => 'select',
