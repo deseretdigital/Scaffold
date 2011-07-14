@@ -399,35 +399,46 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
 		
 		return true;
 	}
-
+	
 	/**
 	 * Returns the table filename for a given table
 	 *
-	 * @param string $schema
 	 * @param array $table
 	 * @return string $fileName
 	 */
-	protected function getTableFile($schema, $table) {
-		$namespace = $this->makeNamespace($schema);
-		$classname = $this->makeClassname($table);
+	protected function getTableFile($table) {
 		$this->createDefaultPaths(array(
 			'tables' => 'Tables/',
 		));
-		$fileName = $this->projectRoot . $this->paths['application'] . $this->paths['modules'] . $this->paths['tables'] . $namespace . '/' . $classname . '.php';
+		$fileName = $this->projectRoot . $this->paths['application'] . $this->paths['modules'] . $this->paths['tables'] . $table['namespace'] . '/' . $table['classNamePartial'] . '.php';
 		return $fileName;
 	}
 
 	/**
 	 * Returns the table class for a given table
 	 *
-	 * @param string $schema
-	 * @param string $table
+	 * @param array $table
 	 * @return string $className
 	 */
-	protected function getTableClass($schema, $table) {
-		$fileName = $this->getTableFile($schema, $table);
+	protected function getTableClass($table) {
+		$fileName = $this->getTableFile($table);
 		$className = $this->convertFileNameToClassName($fileName, $this->paths['application'] . $this->paths['modules']);
 		return $className;
+	}
+	
+	/**
+	 * Returns the table class using a schema and table name
+	 *
+	 * @param string $schema
+	 * @param string $table
+	 * @return string
+	 */
+	protected function getTableClassFromSchemaAndName($schema, $table) {
+		$table = array(
+			'namespace' => $this->makeNamespace($schema),
+			'classNamePartial' => $this->makeClassname($table),
+		);
+		return $this->getTableClass($table);
 	}
 	
 /*===============================
@@ -480,6 +491,21 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
 		$this->output($baseClassName . '... ', false);
 		
 		$baseProperties = array();
+		
+		$baseProperties[] = array(
+        	'name'         => '_tableClass',
+        	'visibility'   => 'protected',
+        	'defaultValue' => $this->getTableClass($table),
+        	'docblock' => 'Zend_Db_Table_Abstract class name',
+    	);
+    	
+		$baseProperties[] = array(
+        	'name'         => '_rowClass',
+        	'visibility'   => 'protected',
+        	'defaultValue' => $this->getRowClass($table),
+        	'docblock' => 'Zend_Db_Row_Abstract class name',
+    	);
+		
 		$baseMethods = array();
     	
 		$baseDocBlock = $baseClassName . "\n\n";
@@ -654,6 +680,13 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
 		$this->output($baseClassName . '... ', false);
 		
 		$baseProperties = array();
+		
+		$baseProperties[] = array(
+        	'name'         => '_tableClass',
+        	'visibility'   => 'protected',
+        	'defaultValue' => $this->getTableClass($table),
+        	'docblock' => 'Zend_Db_Table_Abstract class name',
+    	);
 		
 		/* ================ */
 		/* = Base Methods = */
@@ -832,7 +865,7 @@ if($value !== null) {
 		foreach($table['KEYS'] as $key) {
 			$variableName = '_' . $key['REFERENCED_TABLE_NAME'] . '_row_by_' . $key['COLUMN_NAME'];
 			$functionName = $this->makeClassName('get' . $variableName, false);
-			$tableClassName = $this->getTableClass($key['REFERENCED_TABLE_SCHEMA'], $key['REFERENCED_TABLE_NAME']);
+			$tableClassName = $this->getTableClassFromSchemaAndName($key['REFERENCED_TABLE_SCHEMA'], $key['REFERENCED_TABLE_NAME']);
 			
 			$baseProperties[] = array(
 	        	'name'         => $variableName,
@@ -875,7 +908,7 @@ return $this->'.$variableName.';',
 		foreach($table['DEPENDENT_KEYS'] as $key) {
 			$variableName = '_' . $key['TABLE_NAME'] . '_rowset_by_' . $key['COLUMN_NAME'];
 			$functionName = $this->makeClassName('get' . $variableName, false);
-			$tableClassName = $this->getTableClass($key['TABLE_SCHEMA'], $key['TABLE_NAME']);
+			$tableClassName = $this->getTableClassFromSchemaAndName($key['TABLE_SCHEMA'], $key['TABLE_NAME']);
 			
 			$baseProperties[] = array(
 	        	'name'         => $variableName,
@@ -916,8 +949,8 @@ return $this->'.$variableName.';',
 				foreach($key['RELATED_KEYS'] as $related_key) {
 				$variableName = '_' . $related_key['REFERENCED_TABLE_NAME'] . '_rowset_via_' . $related_key['TABLE_NAME'] . '_by_' . $key['COLUMN_NAME'] . '_and_' . $related_key['COLUMN_NAME'];
 				$functionName = $this->makeClassName('get' . $variableName, false);
-				$destinationTableClassName = $this->getTableClass($related_key['REFERENCED_TABLE_SCHEMA'], $related_key['REFERENCED_TABLE_NAME']);
-				$intersectionTableClassName = $this->getTableClass($related_key['TABLE_SCHEMA'], $related_key['TABLE_NAME']);
+				$destinationTableClassName = $this->getTableClassFromSchemaAndName($related_key['REFERENCED_TABLE_SCHEMA'], $related_key['REFERENCED_TABLE_NAME']);
+				$intersectionTableClassName = $this->getTableClassFromSchemaAndName($related_key['TABLE_SCHEMA'], $related_key['TABLE_NAME']);
 
 				$baseProperties[] = array(
 		        	'name'         => $variableName,
