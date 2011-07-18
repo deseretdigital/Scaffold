@@ -561,6 +561,30 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
 		
 		$baseProperties = array();
 		$baseMethods = array();
+		
+		// toArray needs to be overwritten to ensure we have row objects for all the data. This ensures the getColumnName methods
+		// are used to return the data instead of their raw form
+		$toArray = array(
+			'name' => 'toArray',
+			'visibility' => 'public',
+			'body' => '
+if(count($this->_data) > count($this->_rows)) {
+	foreach($this as $row) {
+		//Do nothing, we just need to initialize each row
+	}
+}
+return parent::toArray();
+			',
+			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+				'shortDescription' => 'Redirects __get to a getColumnName method',
+				'tags' => array(
+					new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+						'datatype' => 'array',
+					)),
+				)
+			)),
+		);
+		$baseMethods[] = $toArray;
     	
 		$baseDocBlock = $baseClassName . "\n\n";
 		$baseDocBlock .= 'Generated base class file for rowsets' . "\n";
@@ -1709,9 +1733,9 @@ return strtolower($this->_columnNameFilter->filter($columnName));
 **===============================*/
 	
 	/**
-	 * Generate Constants based off of APPLICATION_PATH/configs/constants.cfg
+	 * Master function to create the constant classes based off of constants.cfg
 	 *
-	 * @return array void
+	 * @return void
 	 */
 	public function generateConstants() {
 		$this->output('==Constants Generator Initiated==');
@@ -1729,16 +1753,22 @@ return strtolower($this->_columnNameFilter->filter($columnName));
 		$this->makeDirectory($constants_base_dir);
 
 		/* Loop through all databases in the constants array */
-		foreach( $constants as $dbName => $tables ) {
+		foreach( $constants as $schema => $tables ) {
 			if(!is_array($tables)) { continue; }
 
-			$ns = $this->makeNamespace($dbName);
+			$ns = $this->makeNamespace($schema);
 			$this->makeDirectory($constants_base_dir . $ns);
 
-			foreach($tables as $tableName => $options) {
+			foreach($tables as $table => $options) {
 				if(!is_array($options)) { continue; }
+				
+				$table = array(
+					'TABLE_SCHEMA' => $schema,
+					'TABLE_NAME' => $table,
+					'namespace' => $ns,
+				);
 
-				$result = $this->makeConstants($dbName, $tableName, $options);
+				$result = $this->generateConstant($table, $options);
 				if(!$result) {
 					$this->output('Unable to generate constants for ' . $tableName);
 				}
@@ -1748,26 +1778,26 @@ return strtolower($this->_columnNameFilter->filter($columnName));
 	}
 	
 	/**
-	 * Generate constants classes from database using information in constants.cfg
+	 * Delegate function that does the actual work of creating the constant classes
 	 *
-	 * @param array $tableInfo
+	 * @param array $table
+	 * @param array $options
 	 * @return boolean
 	 */
-	protected function makeConstants( $dbName, $tableName, $options ) {
+	protected function generateConstant($table, $options) {
 		if(!array_key_exists('key', $options) || !array_key_exists('value', $options)) { return false; }
 
-		$ns = $this->makeNamespace($dbName);
-		$classNamePartial = $this->makeClassName($tableName);
-		$classFile = $this->projectRoot . $this->paths['library'] . $this->paths['generated'] . $this->paths['constants'] . $ns . '/'. $classNamePartial . '.php';
+		$classNamePartial = $this->makeClassName($table['TABLE_NAME']);
+		$classFile = $this->projectRoot . $this->paths['library'] . $this->paths['generated'] . $this->paths['constants'] . $table['namespace'] . '/'. $classNamePartial . '.php';
 		$className = $this->convertFileNameToClassName($classFile, $this->paths['library']);
 		$this->output($className . '... ', false);
 
 		$sql = 'SELECT `' . $options['key'] . '`, `' . $options['value'] . '`'
-			. 'FROM `' . $dbName . '`.`' . $tableName . '`';
+			. 'FROM `' . $table['TABLE_SCHEMA'] . '`.`' . $table['TABLE_NAME'] . '`';
 		$rows = $this->db->fetchAll($sql);
 
 		$properties = array();
-		foreach($rows as $row) {
+		foreach($rows as $index => $row) {
 			$name = preg_replace('/[^A-z0-9 ]/i', '_', $row[$options['key']]);
 			if(array_key_exists('prefix', $options)) {
 				$name = preg_replace('/[^A-z0-9 ]/i', '_', $options['prefix']) . '_' . $name;
@@ -1780,6 +1810,9 @@ return strtolower($this->_columnNameFilter->filter($columnName));
 				'const' => true,
 			);
 		}
+		
+		$methods = array();
+		
 
 		@$docBlock = "$className\n\nGenerated class constants file for table ". $dbName . '.' . $tableName . "\nAny changes here will be overridden.\n";
 
@@ -1787,6 +1820,7 @@ return strtolower($this->_columnNameFilter->filter($columnName));
 		$class->setName($className);
 		$class->setDocblock($docBlock);
 		$class->setProperties($properties);
+		$base->setMethods($methods);
 		$classCode = $class->generate();
 
 		$this->writeFile($classFile, $classCode);
