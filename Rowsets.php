@@ -894,7 +894,7 @@ if($value !== null) {
 			$baseProperties[] = array(
 	        	'name'         => $variableName,
 	        	'visibility'   => 'protected',
-	        	'defaultValue' => null,
+	        	'defaultValue' => array(),
 	        	'type' => $tableClassName,
 	        	'docblock' => 'Row object for ' . $key['REFERENCED_TABLE_NAME']
 	    	);
@@ -908,10 +908,11 @@ if($value !== null) {
 					'type' => 'Zend_Db_Select',
 				)),
 				'body' => '
-if($this->'.$variableName.' === null) {
-	$this->'.$variableName.' = $this->findParentRow(\''.$tableClassName.'\', \''.$key['CONSTRAINT_NAME'].'\', $select);
+$key_name = ($select !== null) ? sha1($select->__toString()) : \'no_select\';				
+if(!array_key_exists($key_name, $this->'.$variableName.')) {
+	$this->'.$variableName.'[$key_name] = $this->findParentRow(\''.$tableClassName.'\', \''.$key['CONSTRAINT_NAME'].'\', $select);
 }
-return $this->'.$variableName.';',
+return $this->'.$variableName.'[$key_name];',
 				'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
 	            	'shortDescription' => 'Gets the parent row from ' . $key['REFERENCED_TABLE_NAME'] . ' by ' . $key['COLUMN_NAME'],
 	                'tags' => array(
@@ -937,7 +938,7 @@ return $this->'.$variableName.';',
 			$baseProperties[] = array(
 	        	'name'         => $variableName,
 	        	'visibility'   => 'protected',
-	        	'defaultValue' => null,
+	        	'defaultValue' => array(),
 	        	'type' => $tableClassName,
 	        	'docblock' => 'Rowset object for ' . $key['TABLE_NAME']
 	    	);
@@ -951,10 +952,11 @@ return $this->'.$variableName.';',
 					'type' => 'Zend_Db_Select',
 				)),
 				'body' => '
-if($this->'.$variableName.' === null) {
-	$this->'.$variableName.' = $this->findDependentRowset(\''.$tableClassName.'\', \''.$key['CONSTRAINT_NAME'].'\', $select);
+$key_name = ($select !== null) ? sha1($select->__toString()) : \'no_select\';				
+if(!array_key_exists($key_name, $this->'.$variableName.')) {
+	$this->'.$variableName.'[$key_name] = $this->findDependentRowset(\''.$tableClassName.'\', \''.$key['CONSTRAINT_NAME'].'\', $select);
 }
-return $this->'.$variableName.';',
+return $this->'.$variableName.'[$key_name];',
 				'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
 	            	'shortDescription' => 'Gets the dependent rowset from ' . $key['TABLE_NAME'] . ' by ' . $key['COLUMN_NAME'],
 	                'tags' => array(
@@ -979,7 +981,7 @@ return $this->'.$variableName.';',
 				$baseProperties[] = array(
 		        	'name'         => $variableName,
 		        	'visibility'   => 'protected',
-		        	'defaultValue' => null,
+		        	'defaultValue' => array(),
 		        	'type' => $tableClassName,
 		        	'docblock' => 'Rowset object for ' . $related_key['REFERENCED_TABLE_NAME']
 		    	);
@@ -993,10 +995,11 @@ return $this->'.$variableName.';',
 						'type' => 'Zend_Db_Select',
 					)),
 					'body' => '
-if($this->'.$variableName.' === null) {
-	$this->'.$variableName.' = $this->findManyToManyRowset(\''.$destinationTableClassName.'\', \''.$intersectionTableClassName.'\', \''.$key['CONSTRAINT_NAME'].'\', \''.$related_key['CONSTRAINT_NAME'].'\', $select);
+$key_name = ($select !== null) ? sha1($select->__toString()) : \'no_select\';				
+if(!array_key_exists($key_name, $this->'.$variableName.')) {
+	$this->'.$variableName.'[$key_name] = $this->findManyToManyRowset(\''.$destinationTableClassName.'\', \''.$intersectionTableClassName.'\', \''.$key['CONSTRAINT_NAME'].'\', \''.$related_key['CONSTRAINT_NAME'].'\', $select);
 }
-return $this->'.$variableName.';',
+return $this->'.$variableName.'[$key_name];',
 					'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
 		            	'shortDescription' => 'Gets the many-to-many rowset from ' . $related_key['REFERENCED_TABLE_NAME'] . ' by ' . $key['COLUMN_NAME'] . ' and by ' . $related_key['COLUMN_NAME'],
 		                'tags' => array(
@@ -1335,6 +1338,21 @@ return $this->$functionName($value);
 			))
 		);
 		$baseMethods[] = $setColumnValue;
+		
+		$getPrimaryKeys = array(
+			'name' => 'getPrimaryKeys',
+			'visibility' => 'public',
+			'body' => 'return $this->_getPrimaryKey();',
+			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+				'shortDescription' => 'Returns the rows primary key fields',
+				'tags' => array(
+					new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+						'datatype' => 'array',
+					)),
+				),
+			)),
+		);
+		$baseMethods[] = $getPrimaryKeys;
 		
 		// toArray changes to pull the data from the custom getters instead of pulling the data directly
 		$toArray = array(
@@ -1820,7 +1838,7 @@ return strtolower($this->_columnNameFilter->filter($columnName));
 		$class->setName($className);
 		$class->setDocblock($docBlock);
 		$class->setProperties($properties);
-		$base->setMethods($methods);
+		$class->setMethods($methods);
 		$classCode = $class->generate();
 
 		$this->writeFile($classFile, $classCode);
