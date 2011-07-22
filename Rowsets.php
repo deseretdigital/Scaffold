@@ -562,6 +562,33 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
 		$baseProperties = array();
 		$baseMethods = array();
 		
+		$addRow = array(
+			'name' => 'addRow',
+			'visibility' => 'public',
+			'parameters' => array(
+				array(
+					'name' => 'row',
+					'type' => 'Zend_Db_Table_Row_Abstract',
+				),
+			),
+			'body' => '
+$this->_rows[] = $row;
+$this->_data[] = $row->toArray();
+//Count needs to update so we can loop through the rowset correctly still
+$this->_count = count($this->_data);
+',
+			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+				'shortDescription' => 'Adds a row to the rowset',
+				'tags' => array(
+					new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+						'paramName' => 'row',
+						'datatype' => 'Zend_Db_Table_Row_Abstract',
+					)),
+				)
+			)),
+		);
+		$baseMethods[] = $addRow;
+		
 		// toArray needs to be overwritten to ensure we have row objects for all the data. This ensures the getColumnName methods
 		// are used to return the data instead of their raw form
 		$toArray = array(
@@ -1188,11 +1215,11 @@ return parent::__call($method, $args);
 				'tags' => array(
 					new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
 						'paramName' => 'method',
-						'type' => 'string',
+						'datatype' => 'string',
 					)),
 					new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
 						'paramName' => 'args',
-						'type' => 'array',
+						'datatype' => 'array',
 						'description' => 'OPTIONAL Zend_Db_Table_Select query modifier',
 					)),
 					new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
@@ -1225,7 +1252,7 @@ return $this->$functionName();
 				'tags' => array(
 					new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
 						'paramName' => 'columnName',
-						'type' => 'string',
+						'datatype' => 'string',
 					)),
 					new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
 						'datatype' => 'mixed',
@@ -1256,11 +1283,11 @@ return $this->$functionName($value);
 				'tags' => array(
 					new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
 						'paramName' => 'columnName',
-						'type' => 'string',
+						'datatype' => 'string',
 					)),
 					new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
 						'paramName' => 'value',
-						'type' => 'mixed',
+						'datatype' => 'mixed',
 					)),
 					new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
 						'datatype' => 'void',
@@ -1832,7 +1859,7 @@ return strtolower($this->_columnNameFilter->filter($columnName));
 		$methods = array();
 		
 
-		@$docBlock = "$className\n\nGenerated class constants file for table ". $dbName . '.' . $tableName . "\nAny changes here will be overridden.\n";
+		@$docBlock = "$className\n\nGenerated class constants file for table ". $table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'] . "\nAny changes here will be overridden.\n";
 
 		$class = new Zend_CodeGenerator_Php_Class();
 		$class->setName($className);
