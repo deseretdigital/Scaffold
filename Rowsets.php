@@ -584,6 +584,80 @@ return $rowset;
 		$baseProperties = array();
 		$baseMethods = array();
 		
+		$groupBy = array(
+			'name' => 'groupBy',
+			'visibility' => 'public',
+			'parameters' => array(
+				array(
+					'name' => 'column_name'
+				),
+			),
+			'body' => '
+$getter = \'get_\' . $column_name;
+$groups = array();
+foreach($this as $row) {
+	$key = $row->$getter();
+	if(!array_key_exists($key, $groups)) {
+		$groups[$key] = $this->getTable()->createRowset();
+	}
+	$group =& $groups[$key];
+	$group->addRow($row);
+}
+return $groups;',
+			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+				'shortDescription' => 'Groups a rowset by a specified column_name',
+				'tags' => array(
+					new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+						'paramName' => 'column_name',
+						'datatype' => 'string',
+					)),
+					new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+						'datatype' => 'array'
+					)),
+				)
+			)),
+		);
+		$baseMethods[] = $groupBy;
+		
+		$filterBy = array(
+			'name' => 'filterBy',
+			'visibility' => 'public',
+			'parameters' => array(
+				array(
+					'name' => 'column_name'
+				),
+				array(
+					'name' => 'value'
+				),
+			),
+			'body' => '
+$getter = \'get_\' . $column_name;
+$rowset = $this->getTable()->createRowset();
+foreach($this as $row) {
+	if($row->$getter() == $value) {
+		$rowset->addRow($row);
+	}
+}
+return $rowset;',
+			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+				'shortDescription' => 'Filters a rowset by a specified column_name and value',
+				'tags' => array(
+					new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+						'paramName' => 'column_name',
+						'datatype' => 'string',
+					)),
+					new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+						'paramName' => 'value',
+						'datatype' => 'string',
+					)),
+					new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+						'datatype' => 'Zend_Db_Table_Rowset_Abstract'
+					)),
+				)
+			)),
+		);
+		$baseMethods[] = $filterBy;
+		
 		$addRow = array(
 			'name' => 'addRow',
 			'visibility' => 'public',
@@ -594,6 +668,9 @@ return $rowset;
 				),
 			),
 			'body' => '
+if(get_class($row) != $this->_rowClass) {
+	throw new Zend_Db_Table_Rowset_Exception(\'Row must be of the class \' . $this->_rowClass . \' but is of the class \' . get_class($row));
+}
 $this->_rows[] = $row;
 $this->_data[] = $row->toArray();
 //Count needs to update so we can loop through the rowset correctly still
