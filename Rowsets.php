@@ -320,7 +320,6 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
             	'shortDescription' => 'Returns the schema of the table',
                 'tags' => array(
                     new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
-                        'paramName' => 'return',
                         'datatype'  => 'string'
                     )),
                 ),
@@ -335,7 +334,6 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
             	'shortDescription' => 'Returns the name of the table',
                 'tags' => array(
                     new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
-                        'paramName' => 'return',
                         'datatype'  => 'string'
                     )),
                 ),
@@ -350,13 +348,37 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
             	'shortDescription' => 'Get an array of primary keys',
                 'tags' => array(
                     new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
-                        'paramName' => 'return',
                         'datatype'  => 'array'
                     )),
                 ),
 			)),
 		);
 		$baseMethods[] = $getPrimaryKeys;
+		
+		$createRowset = array(
+			'name' => 'createRowset',
+			'body' => '
+$config = array(
+	\'table\' => $this,
+	\'rowClass\' => $this->getRowClass(),
+	\'stored\' => false,
+	\'readOnly\' => false,
+);
+$rowsetClass = $this->getRowsetClass();
+$rowset = new $rowsetClass($config);
+return $rowset;			
+			',
+			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+				'shortDescription' => 'Returns a new blank rowset (not from the database)',
+				'tags' => array(
+					new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+						'name' => '$rowset',
+						'datatype' => 'Zend_Db_Table_Rowset_Abstract',
+					)),
+				),
+			)),
+		);
+		$baseMethods[] = $createRowset;
     	
 		$baseDocBlock = $baseClassName . "\n\n";
 		$baseDocBlock .= 'Generated base class file for tables' . "\n";
@@ -588,6 +610,23 @@ $this->_count = count($this->_data);
 			)),
 		);
 		$baseMethods[] = $addRow;
+				
+		$createRow = array(
+			'name' => 'createRow',
+			'body' => '
+return $this->getTable()->createRow();			
+			',
+			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+				'shortDescription' => 'Returns a new blank row (not from the database)',
+				'tags' => array(
+					new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+						'name' => '$rowset',
+						'datatype' => 'Zend_Db_Table_Row_Abstract',
+					)),
+				),
+			)),
+		);
+		$baseMethods[] = $createRow;
 		
 		// toArray needs to be overwritten to ensure we have row objects for all the data. This ensures the getColumnName methods
 		// are used to return the data instead of their raw form
