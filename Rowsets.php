@@ -713,8 +713,14 @@ return $this->getTable()->createRow();
 			'visibility' => 'public',
 			'body' => '
 $data = array();
+$use_primary_key = count($this->getTable()->getPrimaryKeys()) == 1;
 foreach($this as $row) {
-    $data[] = $row->toArray();
+    if($use_primary_key) {
+        $key = array_shift($row->getPrimaryKeys());
+        $data[$key] = $row->toArray();
+    } else {
+        $data[] = $row->toArray();
+    }
 }
 return $data;
 			',
