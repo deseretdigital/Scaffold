@@ -632,6 +632,8 @@ return $groups;',
 			),
 			'body' => '
 $getter = \'get_\' . $column_name;
+$filter = new Zend_Filter_Word_UnderscoreToCamelCase();
+$getter = $filter->filter($getter);
 $rowset = $this->getTable()->createRowset();
 foreach($this as $row) {
 	if($row->$getter() == $value) {
@@ -716,7 +718,8 @@ $data = array();
 $use_primary_key = count($this->getTable()->getPrimaryKeys()) == 1;
 foreach($this as $row) {
     if($use_primary_key) {
-        $key = array_shift($row->getPrimaryKeys());
+        $keys = $row->getPrimaryKeys();
+        $key = array_shift($keys);
         $data[$key] = $row->toArray();
     } else {
         $data[] = $row->toArray();
