@@ -1,7 +1,7 @@
 <?php
 
 abstract class DDM_Scaffold_Abstract {
-	
+
 /*===============================
 ** Properties
 **===============================*/
@@ -13,7 +13,7 @@ abstract class DDM_Scaffold_Abstract {
 	protected $paths = array();
 	protected $namespaces = array();
 	protected $tables = array();
-	
+
 /*=================================
 ** Constructor and Related Methods
 **=================================*/
@@ -28,22 +28,22 @@ abstract class DDM_Scaffold_Abstract {
 	public function __construct($projectRoot, $config = array()) {
 		$this->projectRoot = $projectRoot;
 		$this->classNameFilter = new Zend_Filter_Word_UnderscoreToCamelCase();
-		
+
 		if(!array_key_exists('databases', $config)) {
 			$config['databases'] = null;
 		}
-		
+
 		if(!array_key_exists('paths', $config)) {
 			$config['paths'] = array();
 		}
-		
+
 		$this->initConfig();
 		$this->initDatabases($config['databases']);
 		$this->initPaths($config['paths']);
 		$this->initDirectories();
 		$this->initGeneral($config);
 	}
-	
+
 	/**
 	 * Empty function to allow for an easily place to add custom logic to __construct without having to overwrite it
 	 *
@@ -51,9 +51,9 @@ abstract class DDM_Scaffold_Abstract {
 	 * @return void
 	 */
 	protected function initGeneral($config) {
-	
+
 	}
-	
+
 	/**
 	 * Loads up the application.ini config
 	 *
@@ -66,7 +66,7 @@ abstract class DDM_Scaffold_Abstract {
 		);
 		$this->config = $application->getOptions();
 	}
-	
+
 	/**
 	 * Inits the database connections
 	 *
@@ -78,17 +78,17 @@ abstract class DDM_Scaffold_Abstract {
 		$defaultDb = $dbParams['dbname'];
 		$dbParams['dbname'] = 'information_schema';
 		$this->db = Zend_Db::factory($this->config['resources']['db']['adapter'], $dbParams);
-		
+
 		if($databases === null && $defaultDb != '') {
 			$databases = $defaultDb;
 		}
-		
+
 		if(!is_array($databases)) {
 			$databases = array($databases);
 		}
 		$this->databases = $databases;
 	}
-	
+
 	/**
 	 * Inits the paths used in generating classes
 	 *
@@ -105,7 +105,7 @@ abstract class DDM_Scaffold_Abstract {
 			'modules' => '',
 		));
 	}
-	
+
 	/**
 	 * Create default paths if they have not been set by the user
 	 *
@@ -119,7 +119,7 @@ abstract class DDM_Scaffold_Abstract {
 			}
 		}
 	}
-	
+
 	/**
 	 * Sets up the directories needed
 	 *
@@ -131,7 +131,7 @@ abstract class DDM_Scaffold_Abstract {
 		$this->makeDirectory($this->paths['application']);
 		$this->makeDirectory($this->paths['application'] . $this->paths['modules']);
 	}
-	
+
 	/**
 	 * Checks to see if a directory exists. If not, the directory is created
 	 *
@@ -145,18 +145,18 @@ abstract class DDM_Scaffold_Abstract {
 			mkdir($this->projectRoot . $path, $chmod);
 		}
 	}
-	
+
 /*===============================
 ** Main Generator
 **===============================*/
-	
+
 	/**
 	 * Generate acts as a helper method to call all other generate methods
 	 *
 	 * @return void
 	 */
 	abstract public function generate();
-	
+
 /*===============================
 ** Utility and Helper Functions
 **===============================*/
@@ -188,14 +188,14 @@ abstract class DDM_Scaffold_Abstract {
 	 */
 	protected function makeClassName( $name, $upperCaseFirst = true ) {
         $newName = $this->classNameFilter->filter($name);
-		
+
 		if(!$upperCaseFirst) {
 			$newName = lcfirst($newName);
 		}
-		
+
 		return $newName;
 	}
-	
+
 	/**
 	 * Converts a file name to a class name
 	 *
@@ -227,7 +227,7 @@ abstract class DDM_Scaffold_Abstract {
 
 		$parts = explode('_', $name );
 		$newWord = '';
-		
+
 		foreach($parts as $p) {
 			$newWord .= substr($p, 0, $lettersToUse );
 		}
@@ -244,7 +244,7 @@ abstract class DDM_Scaffold_Abstract {
 		}
 
 	}
-	
+
 	/**
 	 * Sets a Namespace for a specified string
 	 *
@@ -273,7 +273,7 @@ abstract class DDM_Scaffold_Abstract {
 		}
 		return $res;
 	}
-	
+
 	/**
 	 * Converts a value to a php code string
 	 *
@@ -289,7 +289,7 @@ abstract class DDM_Scaffold_Abstract {
 		}
 		return $code;
 	}
-	
+
 /*===============================
 ** Database Functions
 **===============================*/
@@ -307,7 +307,7 @@ abstract class DDM_Scaffold_Abstract {
 		if(array_key_exists($keyName, $this->tables)) {
 			return $this->tables[$keyName];
 		}
-	
+
 		$sql = "SELECT *
 			FROM information_schema.TABLES
 			WHERE TABLE_SCHEMA = '$database'";
@@ -318,28 +318,28 @@ abstract class DDM_Scaffold_Abstract {
 		foreach($result as $row) {
 			$tables[$row['TABLE_NAME']] = $row;
 		}
-		
-		if($extras) {	
+
+		if($extras) {
 			$ns = $this->makeNamespace($database);
-			
+
 			foreach($tables as &$table) {
 				$table['namespace'] = $ns;
 				$table['classNamePartial'] = $this->makeClassName($table['TABLE_NAME']);
-				
+
 				$table['COLUMNS'] = $this->getColumns($database, $table['TABLE_NAME']);
 
 		        $has_auto_increment = false;
 		        foreach($table['COLUMNS'] as $column){
-		            if(strpos($column['EXTRA'], 'auto_increment') !== false) {
+		            if($this->isColumnAutoIncrement($column)) {
 		            	$has_auto_increment = true;
 		            	break;
 		            }
 		        }
 				$table['AUTO_INCREMENT'] = $has_auto_increment;
-				
+
 				$table['KEYS'] = $this->getKeys($database, $table['TABLE_NAME']);
 				$table['DEPENDENT_KEYS'] = array();
-							
+
 				// this generates a lot of stuff that we already have but in a format that Zend_Db_Table wants
 				$metadata = $this->db->describeTable($table['TABLE_NAME'], $database);
 				if(count($table['KEYS'])) {
@@ -350,7 +350,7 @@ abstract class DDM_Scaffold_Abstract {
 					}
 				}
 				$table['zend_describe_table'] = $metadata;
-				
+
 				$primary_keys = array();
 				foreach($metadata as $column) {
 					if(array_key_exists('PRIMARY', $column) && $column['PRIMARY'] == 1) {
@@ -360,7 +360,7 @@ abstract class DDM_Scaffold_Abstract {
 				$table['PRIMARY_COLUMNS'] = $primary_keys;
 			}
 			unset($table); // nuke the & from above
-			
+
 			//Find dependent keys
 			$dependent_keys = array();
 			foreach($tables as $table) {
@@ -379,7 +379,7 @@ abstract class DDM_Scaffold_Abstract {
 			}
 			unset($table);  // nuke the & from above
 		}
-		
+
 		$this->tables[$keyName] = $tables;
 		return $tables;
 	}
@@ -410,7 +410,7 @@ abstract class DDM_Scaffold_Abstract {
 
 		return $cols;
 	}
-	
+
 	/**
 	 * Parse the column comments out
 	 *
@@ -423,7 +423,7 @@ abstract class DDM_Scaffold_Abstract {
 		}
 		$column['COMMENTS'] = $comments;
 	}
-	
+
 	/**
 	 * Checks to see if a column has the requested comment
 	 *
@@ -469,7 +469,7 @@ abstract class DDM_Scaffold_Abstract {
 		$keys = $this->db->fetchAll( $sql );
 		return $keys;
 	}
-	
+
 	/**
 	 * Returns all the triggers for the specified database
 	 *
@@ -487,23 +487,33 @@ abstract class DDM_Scaffold_Abstract {
 				TRIGGER_SCHEMA = "'.$database.'"
 		';
 		$triggers = $this->db->fetchAll($sql);
-		
-		if($extras) {	
+
+		if($extras) {
 			$ns = $this->makeNamespace($database);
-			
+
 			foreach($triggers as &$trigger) {
 				$trigger['namespace'] = $ns;
 				$trigger['classNamePartial'] = $this->makeClassName($trigger['TRIGGER_NAME']);
 			}
 			unset($trigger); // nuke the & from above
 		}
-		
+
 		return $triggers;
 	}
-	
+
 /*===============================
 ** Column Functions
 **===============================*/
+
+    /**
+     * Checks to see if a column does auto increments
+     *
+     * @param array $column
+     * @return boolean
+     */
+    protected function isColumnAutoIncrement($column) {
+        return strpos($column['EXTRA'], 'auto_increment') !== false;
+    }
 
 	/**
 	 * Checks to see if a column is numeric
@@ -524,7 +534,7 @@ abstract class DDM_Scaffold_Abstract {
 	protected function isColumnTimeRelated($column) {
 		return in_array($column['DATA_TYPE'], array('datetime', 'date', 'time', 'timestamp', 'year'));
 	}
-	
+
 	/**
 	 * Returns the MySQL date format for a column
 	 *
@@ -541,10 +551,10 @@ abstract class DDM_Scaffold_Abstract {
 		} else if($column['DATA_TYPE'] == 'year') {
 			return 'Y';
 		}
-		
+
 		return 'Y-m-d H:i:s';
 	}
-	
+
 	/**
 	 * Returns the label for a column
 	 *
@@ -557,7 +567,7 @@ abstract class DDM_Scaffold_Abstract {
     	$label = ucfirst($label);
     	return $label;
 	}
-	
+
 	/**
 	 * Returns the input name for a column
 	 *
@@ -568,7 +578,7 @@ abstract class DDM_Scaffold_Abstract {
 	protected function getColumnInputName($table, $column) {
 		return lcfirst($table['classNamePartial']) . '[' . $column['COLUMN_NAME'] . ']';
 	}
-	
+
 	/**
 	 * Returns the maxLength to use for a column
 	 *
@@ -577,7 +587,7 @@ abstract class DDM_Scaffold_Abstract {
 	 */
 	protected function getColumnMaxLength($column) {
 		$maxlength = null;
-		
+
 		if(!empty($column['CHARACTER_MAXIMUM_LENGTH'])) {
 			$maxlength = $column['CHARACTER_MAXIMUM_LENGTH'];
 		} else if(!empty($column['NUMERIC_PRECISION'])) {
@@ -600,10 +610,10 @@ abstract class DDM_Scaffold_Abstract {
 				$maxlength = 11;
 			}
 		}
-		
+
 		return $maxlength;
 	}
-	
+
 	/**
 	 * Retursn the form element to be used with the column
 	 *
@@ -612,8 +622,8 @@ abstract class DDM_Scaffold_Abstract {
 	 */
 	protected function getColumnFormElement($column) {
 		$element = 'Zend_Form_Element_Text';
-		
-		if(strpos($column['EXTRA'], 'auto_increment') !== false) {
+
+		if($this->isColumnAutoIncrement($column)) {
 			$element = 'Zend_Form_Element_Hidden';
 		} else if($this->columnHasComment('BOOLEAN', $column)) {
 			$element = 'Zend_Form_Element_Checkbox';
@@ -632,10 +642,10 @@ abstract class DDM_Scaffold_Abstract {
 		} else if($column['DATA_TYPE'] == 'timestamp') {
 			$element = 'Zend_Form_Element_Hidden';
 		}
-		
+
 		return $element;
 	}
-	
+
 	/**
 	 * Returns the validators to be used with the column
 	 *
@@ -644,10 +654,10 @@ abstract class DDM_Scaffold_Abstract {
 	 */
 	protected function getColumnValidators($column) {
 		$validators = array();
-		
+
 		return $validators;
 	}
-	
+
 	/**
 	 * Returns the filters to be used with the column
 	 *
@@ -657,7 +667,7 @@ abstract class DDM_Scaffold_Abstract {
 	protected function getColumnFilters($column) {
 		$filters = array();
 		$filters[] = 'StringTrim';
-		
+
 		return $filters;
 	}
 
@@ -672,9 +682,9 @@ abstract class DDM_Scaffold_Abstract {
 		if($this->columnHasComment('CURRENT_TIMESTAMP', $column)) {
 			$default_value = 'CURRENT_TIMESTAMP';
 		}
-		
+
 		if($default_value === null) {
-			if($column['IS_NULLABLE'] != 'YES' && strpos($column['EXTRA'], 'auto_increment') === false) {
+			if($column['IS_NULLABLE'] != 'YES' && !$this->isColumnAutoIncrement($column)) {
 				if( $this->isColumnNumeric($column) ) {
 					$default_value = 0;
 				} else {
@@ -682,10 +692,10 @@ abstract class DDM_Scaffold_Abstract {
 				}
 			}
 		}
-		
+
 		return $default_value;
 	}
-	
+
 	/**
 	 * Returns the var type for a mysql column array
 	 *

@@ -993,7 +993,7 @@ if($value === true || $value == 1 || $value === \'true\' || $value === \'TRUE\')
 
 			// Cast the value to the correct type
 			if($autocast) {
-				if($column['IS_NULLABLE'] == 'YES') {
+				if($column['IS_NULLABLE'] == 'YES' || $this->isColumnAutoIncrement($column)) {
 					$setBody .= '
 if($value !== null) {
 	$value = ('.$columnType.') $value;
