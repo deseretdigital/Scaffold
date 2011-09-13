@@ -1171,7 +1171,7 @@ return $this->'.$variableName.'[$keyName];',
                     )),
                     'body' => '
 $keyName = ($select !== null) ? sha1($select->__toString()) : \'noSelect\';
-if (!array_key_exists($key_name, $this->'.$variableName.')) {
+if (!array_key_exists($keyName, $this->'.$variableName.')) {
     $this->'.$variableName.'[$keyName] = $this->findManyToManyRowset(\''.$destinationTableClassName.'\', \''.$intersectionTableClassName.'\', \''.$key['CONSTRAINT_NAME'].'\', \''.$relatedKey['CONSTRAINT_NAME'].'\', $select);
 }
 return $this->'.$variableName.'[$keyName];',
