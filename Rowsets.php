@@ -22,168 +22,181 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
 ** Properties
 **===============================*/
 
-	protected $parent_class = array();
-	protected $base_class = array();
+    /**
+     * Array that holds a list of parent classes to use for tables, rowsets, rows, and forms
+     *
+     * @var array
+     */
+    protected $parentClass = array();
+
+    /**
+     * Array that holds a list of base classes to use for tables, rowsets, rows, and forms
+     *
+     * @var array
+     */
+    protected $baseClass = array();
 
 /*=================================
 ** Constructor and Related Methods
 **=================================*/
 
-	/**
-	 * Allows setting up of parent classes that should be used
-	 *
-	 * @param array $config
-	 * @return void
-	 */
-	protected function initGeneral($config) {
-		if(!array_key_exists('parent_class', $config)) {
-			$config['parent_class'] = array();
-		}
+    /**
+     * Allows setting up of parent classes that should be used
+     *
+     * @param array $config
+     *
+     * @return void
+     */
+    protected function initGeneral($config) {
+        if (!array_key_exists('parentClass', $config)) {
+            $config['parentClass'] = array();
+        }
 
-		if(!array_key_exists('table', $config['parent_class'])) {
-			$config['parent_class']['table'] = 'Zend_Db_Table_Abstract';
-		}
+        if (!array_key_exists('table', $config['parentClass'])) {
+            $config['parentClass']['table'] = 'Zend_Db_Table_Abstract';
+        }
 
-		if(!array_key_exists('rowset', $config['parent_class'])) {
-			$config['parent_class']['rowset'] = 'Zend_Db_Table_Rowset_Abstract';
-		}
+        if (!array_key_exists('rowset', $config['parentClass'])) {
+            $config['parentClass']['rowset'] = 'Zend_Db_Table_Rowset_Abstract';
+        }
 
-		if(!array_key_exists('row', $config['parent_class'])) {
-			$config['parent_class']['row'] = 'Zend_Db_Table_Row_Abstract';
-		}
+        if (!array_key_exists('row', $config['parentClass'])) {
+            $config['parentClass']['row'] = 'Zend_Db_Table_Row_Abstract';
+        }
 
-		if(!array_key_exists('form', $config['parent_class'])) {
-			$config['parent_class']['form'] = 'ZendX_JQuery_Form';
-		}
+        if (!array_key_exists('form', $config['parentClass'])) {
+            $config['parentClass']['form'] = 'ZendX_JQuery_Form';
+        }
 
-		$this->parent_class = $config['parent_class'];
-	}
+        $this->parentClass = $config['parentClass'];
+    }
 
 /*===============================
 ** Main Generator
 **===============================*/
 
-	/**
-	 * Generate acts as a helper method to call all other generate methods
-	 *
-	 * @return void
-	 */
-	public function generate() {
-		$this->output('===Master Generator Initiated===');
-		$this->generateTables();
-		$this->generateRowsets();
-		$this->generateRows();
-		$this->generateForms();
-		$this->generateConstants();
-		$this->generateSQLDumps();
-		$this->generateTablesSQL();
-		$this->generateTriggersSQL();
-		$this->output('===Master Generator Complete===');
-	}
+    /**
+     * Generate acts as a helper method to call all other generate methods
+     *
+     * @return void
+     */
+    public function generate() {
+        $this->output('===Master Generator Initiated===');
+        $this->generateTables();
+        $this->generateRowsets();
+        $this->generateRows();
+        $this->generateForms();
+        $this->generateConstants();
+        $this->generateSQLDumps();
+        $this->generateTablesSQL();
+        $this->generateTriggersSQL();
+        $this->output('===Master Generator Complete===');
+    }
 
 /*===============================
 ** Table Generator
 **===============================*/
 
-	/**
-	 * Master function to create the table class for all tables in every databases requested
-	 *
-	 * @return void
-	 */
-	public function generateTables() {
-		$this->output('==Table Generator Initiated==');
-		$this->generateBaseTable();
+    /**
+     * Master function to create the table class for all tables in every databases requested
+     *
+     * @return void
+     */
+    public function generateTables() {
+        $this->output('==Table Generator Initiated==');
+        $this->generateBaseTable();
 
-		$this->createDefaultPaths(array(
-			'tables' => 'Tables/',
-		));
-		$application_base_path = $this->paths['application'] . $this->paths['modules'] . $this->paths['tables'];
-		$generated_base_path = $this->paths['library'] . $this->paths['generated'] . $this->paths['tables'];
+        $this->createDefaultPaths(array(
+            'tables' => 'Tables/',
+        ));
+        $applicationBasePath = $this->paths['application'] . $this->paths['modules'] . $this->paths['tables'];
+        $generatedBasePath = $this->paths['library'] . $this->paths['generated'] . $this->paths['tables'];
 
-		$this->makeDirectory($application_base_path);
-		$this->makeDirectory($generated_base_path);
+        $this->makeDirectory($applicationBasePath);
+        $this->makeDirectory($generatedBasePath);
 
-		foreach($this->databases as $database) {
-			$ns = $this->makeNamespace($database);
-			$this->makeDirectory($application_base_path . $ns);
-			$this->makeDirectory($generated_base_path . $ns);
+        foreach ($this->databases as $database) {
+            $namespace = $this->makeNamespace($database);
+            $this->makeDirectory($applicationBasePath . $namespace);
+            $this->makeDirectory($generatedBasePath . $namespace);
 
-			$tables = $this->getTables($database);
-			foreach($tables as $table) {
-				$results = $this->generateTable($table);
-				if(!$results) {
-					$this->output('Table class could not be created for ' . $database . '.' . $table['TABLE_NAME']);
-				}
-			}
-		}
-		$this->output('==Table Generator Complete==');
-	}
+            $tables = $this->getTables($database);
+            foreach ($tables as $table) {
+                $results = $this->generateTable($table);
+                if (!$results) {
+                    $this->output('Table class could not be created for ' . $database . '.' . $table['TABLE_NAME']);
+                }
+            }
+        }
+        $this->output('==Table Generator Complete==');
+    }
 
-	/**
-	 * Delegate function that does the actual work of creating the table classes
-	 *
-	 * @param array $table
-	 * @return boolean
-	 */
-	protected function generateTable($table) {
-		$baseFile = $this->projectRoot . $this->paths['library'] . $this->paths['generated'] . $this->paths['tables'] . $table['namespace'] . '/' . $table['classNamePartial'] . '.php';
-		$baseClassName = $this->convertFileNameToClassName($baseFile, $this->paths['library']);
-		$this->output($baseClassName . '... ', false);
+    /**
+     * Delegate function that does the actual work of creating the table classes
+     *
+     * @param array $table
+     *
+     * @return boolean
+     */
+    protected function generateTable($table) {
+        $baseFile = $this->projectRoot . $this->paths['library'] . $this->paths['generated'] . $this->paths['tables'] . $table['namespace'] . '/' . $table['classNamePartial'] . '.php';
+        $baseClassName = $this->convertFileNameToClassName($baseFile, $this->paths['library']);
+        $this->output($baseClassName . '... ', false);
 
-		/* =================== */
-		/* = Base Properties = */
-		/* =================== */
+        /* =================== */
+        /* = Base Properties = */
+        /* =================== */
 
         // Columns
         $columns = array();
-    	// We create a variable to pull defaults for a row class instead of information coming from the DB so we can customize the results using mysql column comments, etc
-    	$defaultValues = array();
-        foreach($table['COLUMNS'] as $column){
+        // We create a variable to pull defaults for a row class instead of information coming from the DB so we can customize the results using mysql column comments, etc
+        $defaultValues = array();
+        foreach ($table['COLUMNS'] as $column){
             $columns[] = $column['COLUMN_NAME'];
-    		$defaultValues[$column['COLUMN_NAME']] = $this->getDefaultColumnValue($column);
+            $defaultValues[$column['COLUMN_NAME']] = $this->getDefaultColumnValue($column);
         }
 
         // Use the foreign key constraints to build up reference maps between the tables
-        $reference_map = array();
-        foreach($table['KEYS'] as $key) {
-        	$refTableFile = $this->paths['tables'] . $table['namespace'] . '/' . $this->makeClassName($key['REFERENCED_TABLE_NAME']);
-        	$refTableClass = $this->convertFileNameToClassName($refTableFile);
-        	$map = array(
-        		'columns' => $key['COLUMN_NAME'],
-        		'refTableClass' => $refTableClass,
-        		'refColumns' => $key['REFERENCED_COLUMN_NAME'],
-        	);
-        	$reference_map[$key['CONSTRAINT_NAME']] = $map;
+        $referenceMap = array();
+        foreach ($table['KEYS'] as $key) {
+            $refTableFile = $this->paths['tables'] . $table['namespace'] . '/' . $this->makeClassName($key['REFERENCED_TABLE_NAME']);
+            $refTableClass = $this->convertFileNameToClassName($refTableFile);
+            $map = array(
+                'columns' => $key['COLUMN_NAME'],
+                'refTableClass' => $refTableClass,
+                'refColumns' => $key['REFERENCED_COLUMN_NAME'],
+            );
+            $referenceMap[$key['CONSTRAINT_NAME']] = $map;
         }
 
-		$baseProperties = array();
-		$baseProperties[] = array(
-        	'name'         => '_metadata',
-        	'visibility'   => 'protected',
-        	'defaultValue' => $table['zend_describe_table'],
-        	'docblock' => 'Meta data cache to avoid describes at run time'
-    	);
+        $baseProperties = array();
+        $baseProperties[] = array(
+            'name'         => '_metadata',
+            'visibility'   => 'protected',
+            'defaultValue' => $table['zend_describe_table'],
+            'docblock' => 'Meta data cache to avoid describes at run time'
+        );
 
         $baseProperties[] = array(
-        	'name'         => '_schema',
-        	'visibility'   => 'protected',
-        	'defaultValue' => $table['TABLE_SCHEMA'],
-        	'docblock' => 'DB name'
-    	);
+            'name'         => '_schema',
+            'visibility'   => 'protected',
+            'defaultValue' => $table['TABLE_SCHEMA'],
+            'docblock' => 'DB name'
+        );
 
         $baseProperties[] = array(
-        	'name'         => '_name',
-        	'visibility'   => 'protected',
-        	'defaultValue' => $table['TABLE_NAME'],
-        	'docblock' => 'Table name'
-    	);
+            'name'         => '_name',
+            'visibility'   => 'protected',
+            'defaultValue' => $table['TABLE_NAME'],
+            'docblock' => 'Table name'
+        );
 
         $baseProperties[] = array(
-        	'name'         => '_sequence',
-        	'visibility'   => 'protected',
-        	'defaultValue' => $table['AUTO_INCREMENT'],
-        	'docblock' => 'Does this table have an Auto Increment field?'
-    	);
+            'name'         => '_sequence',
+            'visibility'   => 'protected',
+            'defaultValue' => $table['AUTO_INCREMENT'],
+            'docblock' => 'Does this table have an Auto Increment field?'
+        );
 
         $baseProperties[] = array(
             'name'         => '_cols',
@@ -193,102 +206,102 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
         );
 
         $baseProperties[] = array(
-        	'name'         => '_primary',
-        	'visibility'   => 'protected',
-        	'defaultValue' => $table['PRIMARY_COLUMNS'],
-        	'docblock' => 'Fields that make up the Primary Key'
-    	);
+            'name'         => '_primary',
+            'visibility'   => 'protected',
+            'defaultValue' => $table['PRIMARY_COLUMNS'],
+            'docblock' => 'Fields that make up the Primary Key'
+        );
 
-    	$baseProperties[] = array(
-    		'name' => '_referenceMap',
-    		'visibility' => 'protected',
-    		'defaultValue' => $reference_map,
-    		'docblock' => 'Reference mapping from this table to other tables',
-    	);
+        $baseProperties[] = array(
+            'name' => '_referenceMap',
+            'visibility' => 'protected',
+            'defaultValue' => $referenceMap,
+            'docblock' => 'Reference mapping from this table to other tables',
+        );
 
-    	$baseProperties[] = array(
-    		'name' => '_defaultValues',
-    		'visibility' => 'protected',
-    		'defaultValue' => $defaultValues,
-    		'docblock' => 'Default values for a new row class',
-    	);
+        $baseProperties[] = array(
+            'name' => '_defaultValues',
+            'visibility' => 'protected',
+            'defaultValue' => $defaultValues,
+            'docblock' => 'Default values for a new row class',
+        );
 
-    	$baseProperties[] = array(
-    		'name' => '_rowsetClass',
-    		'visibility' => 'protected',
-    		'defaultValue' => $this->getRowsetClass($table),
-    		'docblock' => 'Rowset class to use with table',
-    	);
+        $baseProperties[] = array(
+            'name' => '_rowsetClass',
+            'visibility' => 'protected',
+            'defaultValue' => $this->getRowsetClass($table),
+            'docblock' => 'Rowset class to use with table',
+        );
 
-    	$baseProperties[] = array(
-    		'name' => '_rowClass',
-    		'visibility' => 'protected',
-    		'defaultValue' => $this->getRowClass($table),
-    		'docblock' => 'Row class to use with table',
-    	);
+        $baseProperties[] = array(
+            'name' => '_rowClass',
+            'visibility' => 'protected',
+            'defaultValue' => $this->getRowClass($table),
+            'docblock' => 'Row class to use with table',
+        );
 
-		/* ================ */
-		/* = Base Methods = */
-		/* ================ */
+        /* ================ */
+        /* = Base Methods = */
+        /* ================ */
 
-		$baseMethods = array();
+        $baseMethods = array();
 
-		$baseDocBlock = $baseClassName . "\n\n";
-		$baseDocBlock .= 'Generated class file for table '. $table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'] . "\n";
-		$baseDocBlock .= 'Any changes here will be overridden.';
+        $baseDocBlock = $baseClassName . "\n\n";
+        $baseDocBlock .= 'Generated class file for table '. $table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'] . "\n";
+        $baseDocBlock .= 'Any changes here will be overridden.';
 
-		$base = new Zend_CodeGenerator_Php_Class();
-		$base->setName($baseClassName);
-		$base->setDocblock($baseDocBlock);
-		$base->setAbstract(true);
-		$base->setProperties($baseProperties);
-		$base->setMethods($baseMethods);
-		$base->setExtendedClass($this->base_class['table']);
-		$baseCode = $base->generate();
+        $base = new Zend_CodeGenerator_Php_Class();
+        $base->setName($baseClassName);
+        $base->setDocblock($baseDocBlock);
+        $base->setAbstract(true);
+        $base->setProperties($baseProperties);
+        $base->setMethods($baseMethods);
+        $base->setExtendedClass($this->baseClass['table']);
+        $baseCode = $base->generate();
 
-		$this->writeFile($baseFile, $baseCode);
-		$this->output('done');
+        $this->writeFile($baseFile, $baseCode);
+        $this->output('done');
 
-		$classFile = $this->projectRoot . $this->paths['application'] . $this->paths['modules'] . $this->paths['tables'] . $table['namespace'] . '/' . $table['classNamePartial'] . '.php';
-		if(!file_exists($classFile)) {
-			$className = $this->convertFileNameToClassName($classFile, $this->paths['application'] . $this->paths['modules']);
-			$this->output($className . '... ', false);
+        $classFile = $this->projectRoot . $this->paths['application'] . $this->paths['modules'] . $this->paths['tables'] . $table['namespace'] . '/' . $table['classNamePartial'] . '.php';
+        if (!file_exists($classFile)) {
+            $className = $this->convertFileNameToClassName($classFile, $this->paths['application'] . $this->paths['modules']);
+            $this->output($className . '... ', false);
 
-			$docBlock = $className . "\n\n";
-			$docBlock .= 'Table for ' . $table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'] . "\n\n";
-			$docBlock .= 'This class is a descendant of '.$this->parent_class['table'].' and can be used to add customizations to ' . $baseClassName;
+            $docBlock = $className . "\n\n";
+            $docBlock .= 'Table for ' . $table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'] . "\n\n";
+            $docBlock .= 'This class is a descendant of '.$this->parentClass['table'].' and can be used to add customizations to ' . $baseClassName;
 
-			$class = new Zend_CodeGenerator_Php_Class();
-			$class->setName($className);
-			$class->setDocblock($docBlock);
-			$class->setExtendedClass($baseClassName);
-			$classCode = $class->generate();
+            $class = new Zend_CodeGenerator_Php_Class();
+            $class->setName($className);
+            $class->setDocblock($docBlock);
+            $class->setExtendedClass($baseClassName);
+            $classCode = $class->generate();
 
-			$this->writeFile($classFile, $classCode);
-			$this->output('done');
-		}
+            $this->writeFile($classFile, $classCode);
+            $this->output('done');
+        }
 
-		return true;
-	}
+        return true;
+    }
 
-	/**
-	 * Creates the application specific table class. Aborts early if class already exists
-	 *
-	 * @return void
-	 */
-	public function generateBaseTable() {
-		$generated_base_path = $this->paths['library'] . $this->paths['generated'] . $this->paths['base'];
-		$this->makeDirectory($generated_base_path);
+    /**
+     * Creates the application specific table class. Aborts early if class already exists
+     *
+     * @return void
+     */
+    public function generateBaseTable() {
+        $generatedBasePath = $this->paths['library'] . $this->paths['generated'] . $this->paths['base'];
+        $this->makeDirectory($generatedBasePath);
 
-		$baseFile = $this->projectRoot . $generated_base_path . 'Table.php';
-		$baseClassName = $this->convertFileNameToClassName($baseFile, $this->paths['library']);
-		$this->output($baseClassName . '... ', false);
+        $baseFile = $this->projectRoot . $generatedBasePath . 'Table.php';
+        $baseClassName = $this->convertFileNameToClassName($baseFile, $this->paths['library']);
+        $this->output($baseClassName . '... ', false);
 
-		/* =================== */
-		/* = Base Properties = */
-		/* =================== */
+        /* =================== */
+        /* = Base Properties = */
+        /* =================== */
 
-		$baseProperties = array();
+        $baseProperties = array();
 
         $baseProperties[] = array(
             'name'         => '_metadataCacheInClass',
@@ -297,427 +310,431 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
             'docblock'     => 'The table metadata has been cached'
         );
 
-    	$baseProperties[] = array(
-    		'name' => '_defaultSource',
-    		'visibility' => 'protected',
-    		'defaultValue' => new Zend_CodeGenerator_Php_Property_DefaultValue(array(
-    			'type' => 'constant',
-    			'value' => 'self::DEFAULT_CLASS',
-    		)),
-    		'docblock' => 'Where should the default values come for new empty rows?',
-    	);
+        $baseProperties[] = array(
+            'name' => '_defaultSource',
+            'visibility' => 'protected',
+            'defaultValue' => new Zend_CodeGenerator_Php_Property_DefaultValue(array(
+                'type' => 'constant',
+                'value' => 'self::DEFAULT_CLASS',
+            )),
+            'docblock' => 'Where should the default values come for new empty rows?',
+        );
 
-		/* ================ */
-		/* = Base Methods = */
-		/* ================ */
+        /* ================ */
+        /* = Base Methods = */
+        /* ================ */
 
-		$baseMethods = array();
+        $baseMethods = array();
 
-		$getSchema = array(
-			'name' => 'getSchema',
-			'body' => 'return $this->_schema;',
-			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-            	'shortDescription' => 'Returns the schema of the table',
+        $getSchema = array(
+            'name' => 'getSchema',
+            'body' => 'return $this->_schema;',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Returns the schema of the table',
                 'tags' => array(
                     new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
                         'datatype'  => 'string'
                     )),
                 ),
-			)),
-		);
-		$baseMethods[] = $getSchema;
+            )),
+        );
+        $baseMethods[] = $getSchema;
 
-		$getTableName = array(
-			'name' => 'getTableName',
-			'body' => 'return $this->_name;',
-			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-            	'shortDescription' => 'Returns the name of the table',
+        $getTableName = array(
+            'name' => 'getTableName',
+            'body' => 'return $this->_name;',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Returns the name of the table',
                 'tags' => array(
                     new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
                         'datatype'  => 'string'
                     )),
                 ),
-			)),
-		);
-		$baseMethods[] = $getTableName;
+            )),
+        );
+        $baseMethods[] = $getTableName;
 
-		$getPrimaryKeys = array(
-			'name' => 'getPrimaryKeys',
-			'body' => 'return $this->_primary;',
-			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-            	'shortDescription' => 'Get an array of primary keys',
+        $getPrimaryKeys = array(
+            'name' => 'getPrimaryKeys',
+            'body' => 'return $this->_primary;',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Get an array of primary keys',
                 'tags' => array(
                     new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
                         'datatype'  => 'array'
                     )),
                 ),
-			)),
-		);
-		$baseMethods[] = $getPrimaryKeys;
+            )),
+        );
+        $baseMethods[] = $getPrimaryKeys;
 
-		$createRowset = array(
-			'name' => 'createRowset',
-			'body' => '
+        $createRowset = array(
+            'name' => 'createRowset',
+            'body' => '
 $config = array(
-	\'table\' => $this,
-	\'rowClass\' => $this->getRowClass(),
-	\'stored\' => false,
-	\'readOnly\' => false,
+    \'table\' => $this,
+    \'rowClass\' => $this->getRowClass(),
+    \'stored\' => false,
+    \'readOnly\' => false,
 );
 $rowsetClass = $this->getRowsetClass();
 $rowset = new $rowsetClass($config);
 return $rowset;
-			',
-			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-				'shortDescription' => 'Returns a new blank rowset (not from the database)',
-				'tags' => array(
-					new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
-						'name' => '$rowset',
-						'datatype' => 'Zend_Db_Table_Rowset_Abstract',
-					)),
-				),
-			)),
-		);
-		$baseMethods[] = $createRowset;
+            ',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Returns a new blank rowset (not from the database)',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'name' => '$rowset',
+                        'datatype' => 'Zend_Db_Table_Rowset_Abstract',
+                    )),
+                ),
+            )),
+        );
+        $baseMethods[] = $createRowset;
 
-		$baseDocBlock = $baseClassName . "\n\n";
-		$baseDocBlock .= 'Generated base class file for tables' . "\n";
-		$baseDocBlock .= 'Any changes here will be overridden.';
+        $baseDocBlock = $baseClassName . "\n\n";
+        $baseDocBlock .= 'Generated base class file for tables' . "\n";
+        $baseDocBlock .= 'Any changes here will be overridden.';
 
-		$base = new Zend_CodeGenerator_Php_Class();
-		$base->setName($baseClassName);
-		$base->setDocblock($baseDocBlock);
-		$base->setAbstract(true);
-		$base->setProperties($baseProperties);
-		$base->setMethods($baseMethods);
-		$base->setExtendedClass($this->parent_class['table']);
-		$baseCode = $base->generate();
+        $base = new Zend_CodeGenerator_Php_Class();
+        $base->setName($baseClassName);
+        $base->setDocblock($baseDocBlock);
+        $base->setAbstract(true);
+        $base->setProperties($baseProperties);
+        $base->setMethods($baseMethods);
+        $base->setExtendedClass($this->parentClass['table']);
+        $baseCode = $base->generate();
 
-		$this->writeFile($baseFile, $baseCode);
-		$this->output('done');
+        $this->writeFile($baseFile, $baseCode);
+        $this->output('done');
 
-		$base_base_path = $this->paths['application'] . $this->paths['modules'] . $this->paths['base'];
-		$this->makeDirectory($base_base_path);
+        $baseBasePath = $this->paths['application'] . $this->paths['modules'] . $this->paths['base'];
+        $this->makeDirectory($baseBasePath);
 
-		$classFile = $this->projectRoot . $base_base_path . 'Table.php';
-		$className = $this->convertFileNameToClassName($classFile, $this->paths['application'] . $this->paths['modules']);
-		$this->base_class['table'] = $className;
-		if(!file_exists($classFile)) {
-			$this->output($className . '... ', false);
+        $classFile = $this->projectRoot . $baseBasePath . 'Table.php';
+        $className = $this->convertFileNameToClassName($classFile, $this->paths['application'] . $this->paths['modules']);
+        $this->baseClass['table'] = $className;
+        if (!file_exists($classFile)) {
+            $this->output($className . '... ', false);
 
-			$docBlock = $className . "\n\n";
-			$docBlock .= 'This class can be used to customize '.$this->parent_class['table'].' with application specific logic. ';
-			$docBlock .= 'All other table classes extend from this class.';
+            $docBlock = $className . "\n\n";
+            $docBlock .= 'This class can be used to customize '.$this->parentClass['table'].' with application specific logic. ';
+            $docBlock .= 'All other table classes extend from this class.';
 
-			$class = new Zend_CodeGenerator_Php_Class();
-			$class->setName($className);
-			$class->setDocblock($docBlock);
-			$class->setExtendedClass($baseClassName);
-			$classCode = $class->generate();
+            $class = new Zend_CodeGenerator_Php_Class();
+            $class->setName($className);
+            $class->setDocblock($docBlock);
+            $class->setExtendedClass($baseClassName);
+            $classCode = $class->generate();
 
-			$this->writeFile($classFile, $classCode);
-			$this->output('done');
-		}
+            $this->writeFile($classFile, $classCode);
+            $this->output('done');
+        }
 
-		return true;
-	}
+        return true;
+    }
 
-	/**
-	 * Returns the table filename for a given table
-	 *
-	 * @param array $table
-	 * @return string $fileName
-	 */
-	protected function getTableFile($table) {
-		$this->createDefaultPaths(array(
-			'tables' => 'Tables/',
-		));
-		$fileName = $this->projectRoot . $this->paths['application'] . $this->paths['modules'] . $this->paths['tables'] . $table['namespace'] . '/' . $table['classNamePartial'] . '.php';
-		return $fileName;
-	}
+    /**
+     * Returns the table filename for a given table
+     *
+     * @param array $table
+     *
+     * @return string $fileName
+     */
+    protected function getTableFile($table) {
+        $this->createDefaultPaths(array(
+            'tables' => 'Tables/',
+        ));
+        $fileName = $this->projectRoot . $this->paths['application'] . $this->paths['modules'] . $this->paths['tables'] . $table['namespace'] . '/' . $table['classNamePartial'] . '.php';
+        return $fileName;
+    }
 
-	/**
-	 * Returns the table class for a given table
-	 *
-	 * @param array $table
-	 * @return string $className
-	 */
-	protected function getTableClass($table) {
-		$fileName = $this->getTableFile($table);
-		$className = $this->convertFileNameToClassName($fileName, $this->paths['application'] . $this->paths['modules']);
-		return $className;
-	}
+    /**
+     * Returns the table class for a given table
+     *
+     * @param array $table
+     *
+     * @return string $className
+     */
+    protected function getTableClass($table) {
+        $fileName = $this->getTableFile($table);
+        $className = $this->convertFileNameToClassName($fileName, $this->paths['application'] . $this->paths['modules']);
+        return $className;
+    }
 
-	/**
-	 * Returns the table class using a schema and table name
-	 *
-	 * @param string $schema
-	 * @param string $table
-	 * @return string
-	 */
-	protected function getTableClassFromSchemaAndName($schema, $table) {
-		$table = array(
-			'namespace' => $this->makeNamespace($schema),
-			'classNamePartial' => $this->makeClassname($table),
-		);
-		return $this->getTableClass($table);
-	}
+    /**
+     * Returns the table class using a schema and table name
+     *
+     * @param string $schema
+     * @param string $table
+     *
+     * @return string
+     */
+    protected function getTableClassFromSchemaAndName($schema, $table) {
+        $table = array(
+            'namespace' => $this->makeNamespace($schema),
+            'classNamePartial' => $this->makeClassname($table),
+        );
+        return $this->getTableClass($table);
+    }
 
 /*===============================
 ** Rowset Generator
 **===============================*/
 
-	/**
-	 * Master function to create the rowset class for all tables in every databases requested
-	 *
-	 * @return void
-	 */
-	public function generateRowsets() {
-		$this->output('==Rowset Generator Initiated==');
-		$this->generateBaseRowset();
+    /**
+     * Master function to create the rowset class for all tables in every databases requested
+     *
+     * @return void
+     */
+    public function generateRowsets() {
+        $this->output('==Rowset Generator Initiated==');
+        $this->generateBaseRowset();
 
-		$this->createDefaultPaths(array(
-			'rowsets' => 'Rowsets/',
-		));
-		$application_base_path = $this->paths['application'] . $this->paths['modules'] . $this->paths['rowsets'];
-		$generated_base_path = $this->paths['library'] . $this->paths['generated'] . $this->paths['rowsets'];
+        $this->createDefaultPaths(array(
+            'rowsets' => 'Rowsets/',
+        ));
+        $applicationBasePath = $this->paths['application'] . $this->paths['modules'] . $this->paths['rowsets'];
+        $generatedBasePath = $this->paths['library'] . $this->paths['generated'] . $this->paths['rowsets'];
 
-		$this->makeDirectory($application_base_path);
-		$this->makeDirectory($generated_base_path);
+        $this->makeDirectory($applicationBasePath);
+        $this->makeDirectory($generatedBasePath);
 
-		foreach($this->databases as $database) {
-			$ns = $this->makeNamespace($database);
-			$this->makeDirectory($application_base_path . $ns);
-			$this->makeDirectory($generated_base_path . $ns);
+        foreach ($this->databases as $database) {
+            $namespace = $this->makeNamespace($database);
+            $this->makeDirectory($applicationBasePath . $namespace);
+            $this->makeDirectory($generatedBasePath . $namespace);
 
-			$tables = $this->getTables($database);
-			foreach($tables as $table) {
-				$results = $this->generateRowset($table);
-				if(!$results) {
-					$this->output('Rowset class could not be created for ' . $database . '.' . $table['TABLE_NAME']);
-				}
-			}
-		}
-		$this->output('==Rowset Generator Complete==');
-	}
+            $tables = $this->getTables($database);
+            foreach ($tables as $table) {
+                $results = $this->generateRowset($table);
+                if (!$results) {
+                    $this->output('Rowset class could not be created for ' . $database . '.' . $table['TABLE_NAME']);
+                }
+            }
+        }
+        $this->output('==Rowset Generator Complete==');
+    }
 
-	/**
-	 * Delegate function that does the actual work of creating the rowset classes
-	 *
-	 * @param array $table
-	 * @return boolean
-	 */
-	protected function generateRowset($table) {
-		$baseFile = $this->projectRoot . $this->paths['library'] . $this->paths['generated'] . $this->paths['rowsets'] . $table['namespace'] . '/' . $table['classNamePartial'] . '.php';
-		$baseClassName = $this->convertFileNameToClassName($baseFile, $this->paths['library']);
-		$this->output($baseClassName . '... ', false);
+    /**
+     * Delegate function that does the actual work of creating the rowset classes
+     *
+     * @param array $table
+     *
+     * @return boolean
+     */
+    protected function generateRowset($table) {
+        $baseFile = $this->projectRoot . $this->paths['library'] . $this->paths['generated'] . $this->paths['rowsets'] . $table['namespace'] . '/' . $table['classNamePartial'] . '.php';
+        $baseClassName = $this->convertFileNameToClassName($baseFile, $this->paths['library']);
+        $this->output($baseClassName . '... ', false);
 
-		$baseProperties = array();
+        $baseProperties = array();
 
-		$baseProperties[] = array(
-        	'name'         => '_tableClass',
-        	'visibility'   => 'protected',
-        	'defaultValue' => $this->getTableClass($table),
-        	'docblock' => 'Zend_Db_Table_Abstract class name',
-    	);
+        $baseProperties[] = array(
+            'name'         => '_tableClass',
+            'visibility'   => 'protected',
+            'defaultValue' => $this->getTableClass($table),
+            'docblock' => 'Zend_Db_Table_Abstract class name',
+        );
 
-		$baseProperties[] = array(
-        	'name'         => '_rowClass',
-        	'visibility'   => 'protected',
-        	'defaultValue' => $this->getRowClass($table),
-        	'docblock' => 'Zend_Db_Row_Abstract class name',
-    	);
+        $baseProperties[] = array(
+            'name'         => '_rowClass',
+            'visibility'   => 'protected',
+            'defaultValue' => $this->getRowClass($table),
+            'docblock' => 'Zend_Db_Row_Abstract class name',
+        );
 
-		$baseMethods = array();
+        $baseMethods = array();
 
-		$baseDocBlock = $baseClassName . "\n\n";
-		$baseDocBlock .= 'Generated class file for rowset '. $table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'] . "\n";
-		$baseDocBlock .= 'Any changes here will be overridden.';
+        $baseDocBlock = $baseClassName . "\n\n";
+        $baseDocBlock .= 'Generated class file for rowset '. $table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'] . "\n";
+        $baseDocBlock .= 'Any changes here will be overridden.';
 
-		$base = new Zend_CodeGenerator_Php_Class();
-		$base->setName($baseClassName);
-		$base->setDocblock($baseDocBlock);
-		$base->setAbstract(true);
-		$base->setProperties($baseProperties);
-		$base->setMethods($baseMethods);
-		$base->setExtendedClass($this->base_class['rowset']);
-		$baseCode = $base->generate();
+        $base = new Zend_CodeGenerator_Php_Class();
+        $base->setName($baseClassName);
+        $base->setDocblock($baseDocBlock);
+        $base->setAbstract(true);
+        $base->setProperties($baseProperties);
+        $base->setMethods($baseMethods);
+        $base->setExtendedClass($this->baseClass['rowset']);
+        $baseCode = $base->generate();
 
-		$this->writeFile($baseFile, $baseCode);
-		$this->output('done');
+        $this->writeFile($baseFile, $baseCode);
+        $this->output('done');
 
-		$classFile = $this->projectRoot . $this->paths['application'] . $this->paths['modules'] . $this->paths['rowsets'] . $table['namespace'] . '/' . $table['classNamePartial'] . '.php';
-		if(!file_exists($classFile)) {
-			$className = $this->convertFileNameToClassName($classFile, $this->paths['application'] . $this->paths['modules']);
-			$this->output($className . '... ', false);
+        $classFile = $this->projectRoot . $this->paths['application'] . $this->paths['modules'] . $this->paths['rowsets'] . $table['namespace'] . '/' . $table['classNamePartial'] . '.php';
+        if (!file_exists($classFile)) {
+            $className = $this->convertFileNameToClassName($classFile, $this->paths['application'] . $this->paths['modules']);
+            $this->output($className . '... ', false);
 
-			$docBlock = $className . "\n\n";
-			$docBlock .= 'Rowset for ' . $table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'] . "\n\n";
-			$docBlock .= 'This class is a descendant of '.$this->parent_class['rowset'].' and can be used to add customizations to ' . $baseClassName;
+            $docBlock = $className . "\n\n";
+            $docBlock .= 'Rowset for ' . $table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'] . "\n\n";
+            $docBlock .= 'This class is a descendant of '.$this->parentClass['rowset'].' and can be used to add customizations to ' . $baseClassName;
 
-			$class = new Zend_CodeGenerator_Php_Class();
-			$class->setName($className);
-			$class->setDocblock($docBlock);
-			$class->setExtendedClass($baseClassName);
-			$classCode = $class->generate();
+            $class = new Zend_CodeGenerator_Php_Class();
+            $class->setName($className);
+            $class->setDocblock($docBlock);
+            $class->setExtendedClass($baseClassName);
+            $classCode = $class->generate();
 
-			$this->writeFile($classFile, $classCode);
-			$this->output('done');
-		}
+            $this->writeFile($classFile, $classCode);
+            $this->output('done');
+        }
 
-		return true;
-	}
+        return true;
+    }
 
-	/**
-	 * Creates the application specific rowset class. Aborts early if class already exists
-	 *
-	 * @return void
-	 */
-	public function generateBaseRowset() {
-		$generated_base_path = $this->paths['library'] . $this->paths['generated'] . $this->paths['base'];
-		$this->makeDirectory($generated_base_path);
+    /**
+     * Creates the application specific rowset class. Aborts early if class already exists
+     *
+     * @return void
+     */
+    public function generateBaseRowset() {
+        $generatedBasePath = $this->paths['library'] . $this->paths['generated'] . $this->paths['base'];
+        $this->makeDirectory($generatedBasePath);
 
-		$baseFile = $this->projectRoot . $generated_base_path . 'Rowset.php';
-		$baseClassName = $this->convertFileNameToClassName($baseFile, $this->paths['library']);
-		$this->output($baseClassName . '... ', false);
+        $baseFile = $this->projectRoot . $generatedBasePath . 'Rowset.php';
+        $baseClassName = $this->convertFileNameToClassName($baseFile, $this->paths['library']);
+        $this->output($baseClassName . '... ', false);
 
-		$baseProperties = array();
-		$baseMethods = array();
+        $baseProperties = array();
+        $baseMethods = array();
 
-		$groupBy = array(
-			'name' => 'groupBy',
-			'visibility' => 'public',
-			'parameters' => array(
-				array(
-					'name' => 'column_name'
-				),
-			),
-			'body' => '
-$getter = \'get_\' . $column_name;
+        $groupBy = array(
+            'name' => 'groupBy',
+            'visibility' => 'public',
+            'parameters' => array(
+                array(
+                    'name' => 'columnName'
+                ),
+            ),
+            'body' => '
+$getter = \'get_\' . $columnName;
 $groups = array();
-foreach($this as $row) {
-	$key = $row->$getter();
-	if(!array_key_exists($key, $groups)) {
-		$groups[$key] = $this->getTable()->createRowset();
-	}
-	$group =& $groups[$key];
-	$group->addRow($row);
+foreach ($this as $row) {
+    $key = $row->$getter();
+    if (!array_key_exists($key, $groups)) {
+        $groups[$key] = $this->getTable()->createRowset();
+    }
+    $group =& $groups[$key];
+    $group->addRow($row);
 }
 return $groups;',
-			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-				'shortDescription' => 'Groups a rowset by a specified column_name',
-				'tags' => array(
-					new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
-						'paramName' => 'column_name',
-						'datatype' => 'string',
-					)),
-					new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
-						'datatype' => 'array'
-					)),
-				)
-			)),
-		);
-		$baseMethods[] = $groupBy;
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Groups a rowset by a specified columnName',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'columnName',
+                        'datatype' => 'string',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'datatype' => 'array'
+                    )),
+                )
+            )),
+        );
+        $baseMethods[] = $groupBy;
 
-		$filterBy = array(
-			'name' => 'filterBy',
-			'visibility' => 'public',
-			'parameters' => array(
-				array(
-					'name' => 'column_name'
-				),
-				array(
-					'name' => 'value'
-				),
-			),
-			'body' => '
-$getter = \'get_\' . $column_name;
+        $filterBy = array(
+            'name' => 'filterBy',
+            'visibility' => 'public',
+            'parameters' => array(
+                array(
+                    'name' => 'columnName'
+                ),
+                array(
+                    'name' => 'value'
+                ),
+            ),
+            'body' => '
+$getter = \'get_\' . $columnName;
 $filter = new Zend_Filter_Word_UnderscoreToCamelCase();
 $getter = $filter->filter($getter);
 $rowset = $this->getTable()->createRowset();
-foreach($this as $row) {
-	if($row->$getter() == $value) {
-		$rowset->addRow($row);
-	}
+foreach ($this as $row) {
+    if ($row->$getter() == $value) {
+        $rowset->addRow($row);
+    }
 }
 return $rowset;',
-			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-				'shortDescription' => 'Filters a rowset by a specified column_name and value',
-				'tags' => array(
-					new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
-						'paramName' => 'column_name',
-						'datatype' => 'string',
-					)),
-					new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
-						'paramName' => 'value',
-						'datatype' => 'string',
-					)),
-					new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
-						'datatype' => 'Zend_Db_Table_Rowset_Abstract'
-					)),
-				)
-			)),
-		);
-		$baseMethods[] = $filterBy;
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Filters a rowset by a specified columnName and value',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'columnName',
+                        'datatype' => 'string',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'value',
+                        'datatype' => 'string',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'datatype' => 'Zend_Db_Table_Rowset_Abstract'
+                    )),
+                )
+            )),
+        );
+        $baseMethods[] = $filterBy;
 
-		$addRow = array(
-			'name' => 'addRow',
-			'visibility' => 'public',
-			'parameters' => array(
-				array(
-					'name' => 'row',
-					'type' => 'Zend_Db_Table_Row_Abstract',
-				),
-			),
-			'body' => '
-if(get_class($row) != $this->_rowClass) {
-	throw new Zend_Db_Table_Rowset_Exception(\'Row must be of the class \' . $this->_rowClass . \' but is of the class \' . get_class($row));
+        $addRow = array(
+            'name' => 'addRow',
+            'visibility' => 'public',
+            'parameters' => array(
+                array(
+                    'name' => 'row',
+                    'type' => 'Zend_Db_Table_Row_Abstract',
+                ),
+            ),
+            'body' => '
+if (get_class($row) != $this->_rowClass) {
+    throw new Zend_Db_Table_Rowset_Exception(\'Row must be of the class \' . $this->_rowClass . \' but is of the class \' . get_class($row));
 }
 $this->_rows[] = $row;
 $this->_data[] = $row->toArray();
 //Count needs to update so we can loop through the rowset correctly still
 $this->_count = count($this->_data);
 ',
-			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-				'shortDescription' => 'Adds a row to the rowset',
-				'tags' => array(
-					new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
-						'paramName' => 'row',
-						'datatype' => 'Zend_Db_Table_Row_Abstract',
-					)),
-				)
-			)),
-		);
-		$baseMethods[] = $addRow;
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Adds a row to the rowset',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'row',
+                        'datatype' => 'Zend_Db_Table_Row_Abstract',
+                    )),
+                )
+            )),
+        );
+        $baseMethods[] = $addRow;
 
-		$createRow = array(
-			'name' => 'createRow',
-			'body' => '
+        $createRow = array(
+            'name' => 'createRow',
+            'body' => '
 return $this->getTable()->createRow();
-			',
-			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-				'shortDescription' => 'Returns a new blank row (not from the database)',
-				'tags' => array(
-					new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
-						'name' => '$rowset',
-						'datatype' => 'Zend_Db_Table_Row_Abstract',
-					)),
-				),
-			)),
-		);
-		$baseMethods[] = $createRow;
+            ',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Returns a new blank row (not from the database)',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'name' => '$rowset',
+                        'datatype' => 'Zend_Db_Table_Row_Abstract',
+                    )),
+                ),
+            )),
+        );
+        $baseMethods[] = $createRow;
 
-		// toArray needs to be overwritten for two reasons:
+        // toArray needs to be overwritten for two reasons:
         // 1) To ensure we to a row->toArray resulting in getColumnName functions being called()
         // 2) To ensure we go through the rowsets current()
-		$toArray = array(
-			'name' => 'toArray',
-			'visibility' => 'public',
-			'body' => '
+        $toArray = array(
+            'name' => 'toArray',
+            'visibility' => 'public',
+            'body' => '
 $data = array();
-$use_primary_key = count($this->getTable()->getPrimaryKeys()) == 1;
-foreach($this as $row) {
-    if($use_primary_key) {
+$usePrimaryKey = count($this->getTable()->getPrimaryKeys()) == 1;
+foreach ($this as $row) {
+    if ($usePrimaryKey) {
         $keys = $row->getPrimaryKeys();
         $key = array_shift($keys);
         $data[$key] = $row->toArray();
@@ -726,537 +743,543 @@ foreach($this as $row) {
     }
 }
 return $data;
-			',
-			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-				'shortDescription' => 'Redirects __get to a getColumnName method',
-				'tags' => array(
-					new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
-						'datatype' => 'array',
-					)),
-				)
-			)),
-		);
-		$baseMethods[] = $toArray;
+            ',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Redirects __get to a getColumnName method',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'datatype' => 'array',
+                    )),
+                )
+            )),
+        );
+        $baseMethods[] = $toArray;
 
-		$baseDocBlock = $baseClassName . "\n\n";
-		$baseDocBlock .= 'Generated base class file for rowsets' . "\n";
-		$baseDocBlock .= 'Any changes here will be overridden.';
+        $baseDocBlock = $baseClassName . "\n\n";
+        $baseDocBlock .= 'Generated base class file for rowsets' . "\n";
+        $baseDocBlock .= 'Any changes here will be overridden.';
 
-		$base = new Zend_CodeGenerator_Php_Class();
-		$base->setName($baseClassName);
-		$base->setDocblock($baseDocBlock);
-		$base->setAbstract(true);
-		$base->setProperties($baseProperties);
-		$base->setMethods($baseMethods);
-		$base->setExtendedClass($this->parent_class['rowset']);
-		$baseCode = $base->generate();
+        $base = new Zend_CodeGenerator_Php_Class();
+        $base->setName($baseClassName);
+        $base->setDocblock($baseDocBlock);
+        $base->setAbstract(true);
+        $base->setProperties($baseProperties);
+        $base->setMethods($baseMethods);
+        $base->setExtendedClass($this->parentClass['rowset']);
+        $baseCode = $base->generate();
 
-		$this->writeFile($baseFile, $baseCode);
-		$this->output('done');
+        $this->writeFile($baseFile, $baseCode);
+        $this->output('done');
 
-		$base_base_path = $this->paths['application'] . $this->paths['modules'] . $this->paths['base'];
-		$this->makeDirectory($base_base_path);
+        $baseBasePath = $this->paths['application'] . $this->paths['modules'] . $this->paths['base'];
+        $this->makeDirectory($baseBasePath);
 
-		$classFile = $this->projectRoot . $base_base_path . 'Rowset.php';
-		$className = $this->convertFileNameToClassName($classFile, $this->paths['application'] . $this->paths['modules']);
-		$this->base_class['rowset'] = $className;
-		if(!file_exists($classFile)) {
-			$this->output($className . '... ', false);
+        $classFile = $this->projectRoot . $baseBasePath . 'Rowset.php';
+        $className = $this->convertFileNameToClassName($classFile, $this->paths['application'] . $this->paths['modules']);
+        $this->baseClass['rowset'] = $className;
+        if (!file_exists($classFile)) {
+            $this->output($className . '... ', false);
 
-			$docBlock = $className . "\n\n";
-			$docBlock .= 'This class can be used to customize '.$this->parent_class['rowset'].' with application specific logic. ';
-			$docBlock .= 'All other rowset classes extend from this class.';
+            $docBlock = $className . "\n\n";
+            $docBlock .= 'This class can be used to customize '.$this->parentClass['rowset'].' with application specific logic. ';
+            $docBlock .= 'All other rowset classes extend from this class.';
 
-			$class = new Zend_CodeGenerator_Php_Class();
-			$class->setName($className);
-			$class->setDocblock($docBlock);
-			$class->setExtendedClass($baseClassName);
-			$classCode = $class->generate();
+            $class = new Zend_CodeGenerator_Php_Class();
+            $class->setName($className);
+            $class->setDocblock($docBlock);
+            $class->setExtendedClass($baseClassName);
+            $classCode = $class->generate();
 
-			$this->writeFile($classFile, $classCode);
-			$this->output('done');
-		}
+            $this->writeFile($classFile, $classCode);
+            $this->output('done');
+        }
 
-		return true;
-	}
+        return true;
+    }
 
-	/**
-	 * Returns the rowset filename for a given table
-	 *
-	 * @param array $table
-	 * @return string $fileName
-	 */
-	protected function getRowsetFile($table) {
-		$this->createDefaultPaths(array(
-			'rowsets' => 'Rowsets/',
-		));
-		$fileName = $this->projectRoot . $this->paths['application'] . $this->paths['modules'] . $this->paths['rowsets'] . $table['namespace'] . '/' . $table['classNamePartial'] . '.php';
-		return $fileName;
-	}
+    /**
+     * Returns the rowset filename for a given table
+     *
+     * @param array $table
+     *
+     * @return string $fileName
+     */
+    protected function getRowsetFile($table) {
+        $this->createDefaultPaths(array(
+            'rowsets' => 'Rowsets/',
+        ));
+        $fileName = $this->projectRoot . $this->paths['application'] . $this->paths['modules'] . $this->paths['rowsets'] . $table['namespace'] . '/' . $table['classNamePartial'] . '.php';
+        return $fileName;
+    }
 
-	/**
-	 * Returns the rowset class for a given table
-	 *
-	 * @param array $table
-	 * @return string $className
-	 */
-	protected function getRowsetClass($table) {
-		$fileName = $this->getRowsetFile($table);
-		$className = $this->convertFileNameToClassName($fileName, $this->paths['application'] . $this->paths['modules']);
-		return $className;
-	}
+    /**
+     * Returns the rowset class for a given table
+     *
+     * @param array $table
+     *
+     * @return string $className
+     */
+    protected function getRowsetClass($table) {
+        $fileName = $this->getRowsetFile($table);
+        $className = $this->convertFileNameToClassName($fileName, $this->paths['application'] . $this->paths['modules']);
+        return $className;
+    }
 
 /*===============================
 ** Row Generator
 **===============================*/
 
-	/**
-	 * Master function to create the row class for all tables in every databases requested
-	 *
-	 * @return void
-	 */
-	public function generateRows() {
-		$this->output('==Row Generator Initiated==');
-		$this->generateBaseRow();
+    /**
+     * Master function to create the row class for all tables in every databases requested
+     *
+     * @return void
+     */
+    public function generateRows() {
+        $this->output('==Row Generator Initiated==');
+        $this->generateBaseRow();
 
-		$this->createDefaultPaths(array(
-			'rows' => 'Rows/',
-		));
-		$application_base_path = $this->paths['application'] . $this->paths['modules'] . $this->paths['rows'];
-		$generated_base_path = $this->paths['library'] . $this->paths['generated'] . $this->paths['rows'];
+        $this->createDefaultPaths(array(
+            'rows' => 'Rows/',
+        ));
+        $applicationBasePath = $this->paths['application'] . $this->paths['modules'] . $this->paths['rows'];
+        $generatedBasePath = $this->paths['library'] . $this->paths['generated'] . $this->paths['rows'];
 
-		$this->makeDirectory($application_base_path);
-		$this->makeDirectory($generated_base_path);
+        $this->makeDirectory($applicationBasePath);
+        $this->makeDirectory($generatedBasePath);
 
-		foreach($this->databases as $database) {
-			$ns = $this->makeNamespace($database);
-			$this->makeDirectory($application_base_path . $ns);
-			$this->makeDirectory($generated_base_path . $ns);
+        foreach ($this->databases as $database) {
+            $namespace = $this->makeNamespace($database);
+            $this->makeDirectory($applicationBasePath . $namespace);
+            $this->makeDirectory($generatedBasePath . $namespace);
 
-			$tables = $this->getTables($database);
-			foreach($tables as $table) {
-				$results = $this->generateRow($table);
-				if(!$results) {
-					$this->output('Row class could not be created for ' . $database . '.' . $table['TABLE_NAME']);
-				}
-			}
-		}
-		$this->output('==Row Generator Complete==');
-	}
+            $tables = $this->getTables($database);
+            foreach ($tables as $table) {
+                $results = $this->generateRow($table);
+                if (!$results) {
+                    $this->output('Row class could not be created for ' . $database . '.' . $table['TABLE_NAME']);
+                }
+            }
+        }
+        $this->output('==Row Generator Complete==');
+    }
 
-	/**
-	 * Delegate function that does the actual work of creating the row classes
-	 *
-	 * @param array $table
-	 * @return boolean
-	 */
-	protected function generateRow($table) {
-		$baseFile = $this->projectRoot . $this->paths['library'] . $this->paths['generated'] . $this->paths['rows'] . $table['namespace'] . '/' . $table['classNamePartial'] . '.php';
-		$baseClassName = $this->convertFileNameToClassName($baseFile, $this->paths['library']);
-		$this->output($baseClassName . '... ', false);
+    /**
+     * Delegate function that does the actual work of creating the row classes
+     *
+     * @param array $table
+     *
+     * @return boolean
+     */
+    protected function generateRow($table) {
+        $baseFile = $this->projectRoot . $this->paths['library'] . $this->paths['generated'] . $this->paths['rows'] . $table['namespace'] . '/' . $table['classNamePartial'] . '.php';
+        $baseClassName = $this->convertFileNameToClassName($baseFile, $this->paths['library']);
+        $this->output($baseClassName . '... ', false);
 
-		$baseProperties = array();
+        $baseProperties = array();
 
-		$baseProperties[] = array(
-        	'name'         => '_tableClass',
-        	'visibility'   => 'protected',
-        	'defaultValue' => $this->getTableClass($table),
-        	'docblock' => 'Zend_Db_Table_Abstract class name',
-    	);
+        $baseProperties[] = array(
+            'name'         => '_tableClass',
+            'visibility'   => 'protected',
+            'defaultValue' => $this->getTableClass($table),
+            'docblock' => 'Zend_Db_Table_Abstract class name',
+        );
 
-		/* ================ */
-		/* = Base Methods = */
-		/* ================ */
+        /* ================ */
+        /* = Base Methods = */
+        /* ================ */
 
-		$baseMethods = array();
+        $baseMethods = array();
 
-		// Create the getter/setters for each column
-		foreach($table['COLUMNS'] as $column) {
-			$functionName = $this->makeClassName($column['COLUMN_NAME']);
-			$columnType = $this->getColumnVarType($column);
+        // Create the getter/setters for each column
+        foreach ($table['COLUMNS'] as $column) {
+            $functionName = $this->makeClassName($column['COLUMN_NAME']);
+            $columnType = $this->getColumnVarType($column);
 
-			// Getter Variables
-			$returnType = $columnType;
-			$getParameters = array();
-			$getDocblock = array(
-				'shortDescription' => 'Returns the value for ' . $column['COLUMN_NAME'],
-				'tags' => array(),
-			);
+            // Getter Variables
+            $returnType = $columnType;
+            $getParameters = array();
+            $getDocblock = array(
+                'shortDescription' => 'Returns the value for ' . $column['COLUMN_NAME'],
+                'tags' => array(),
+            );
 
-			// Setter Variables
-			$paramType = $columnType;
-			$autocast = true;
-			$setParameters = array(array(
-				'name' => 'value'
-			));
-			$setDocblock = array(
-				'shortDescription' => 'Sets the value for ' . $column['COLUMN_NAME'],
-				'tags' => array(),
-			);
+            // Setter Variables
+            $paramType = $columnType;
+            $autocast = true;
+            $setParameters = array(array(
+                'name' => 'value'
+            ));
+            $setDocblock = array(
+                'shortDescription' => 'Sets the value for ' . $column['COLUMN_NAME'],
+                'tags' => array(),
+            );
 
-			$getBody = '$value = $this->getColumnValue(\''.$column['COLUMN_NAME'].'\');'."\n";
-			$setBody = '';
+            $getBody = '$value = $this->getColumnValue(\''.$column['COLUMN_NAME'].'\');'."\n";
+            $setBody = '';
 
-			// If the column is time related, we need to store it in the correct format for saving to the database
-			if($this->isColumnTimeRelated($column)) {
-				$dateFormat = $this->getDateFormatForColumn($column);
+            // If the column is time related, we need to store it in the correct format for saving to the database
+            if ($this->isColumnTimeRelated($column)) {
+                $dateFormat = $this->getDateFormatForColumn($column);
 
-				$returnType .= '|int';
-				// Give an option to return a timestamp if desired instead of the date string
-				$getParameters[] = array(
-					'name' => 'return_unixtime',
-					'defaultValue' => false,
-				);
-				$getDocblock['tags'][] = new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
-					'datatype' => 'boolean',
-					'paramName' => 'return_unixtime',
-					'description' => 'OPTIONAL',
-					'position' => 1,
-				));
-				$getBody .= 'if('.(($column['IS_NULLABLE'] == 'YES') ? '$value !== null && ' : '').'$return_unixtime) {
-	$value = strtotime($value);
+                $returnType .= '|int';
+                // Give an option to return a timestamp if desired instead of the date string
+                $getParameters[] = array(
+                    'name' => 'returnUnixtime',
+                    'defaultValue' => false,
+                );
+                $getDocblock['tags'][] = new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                    'datatype' => 'boolean',
+                    'paramName' => 'returnUnixtime',
+                    'description' => 'OPTIONAL',
+                    'position' => 1,
+                ));
+                $getBody .= 'if ('.(($column['IS_NULLABLE'] == 'YES') ? '$value !== null && ' : '').'$returnUnixtime) {
+    $value = strtotime($value);
 }
 ';
 
-				// Give an option to not convert a string and reapply the date format. This allows people to pass in already
-				// formated dates that occur before either 1901 or 1970 depending on the system
-				$paramType .= '|int';
-				$setParameters[] = array(
-					'name' => 'convert_string',
-					'defaultValue' => true,
-				);
-				$setDocblock['tags'][] = new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
-					'paramName' => 'convert_string',
-					'datatype' => 'boolean',
-					'description' => 'OPTIONAL',
-				));
+                // Give an option to not convert a string and reapply the date format. This allows people to pass in already
+                // formated dates that occur before either 1901 or 1970 depending on the system
+                $paramType .= '|int';
+                $setParameters[] = array(
+                    'name' => 'convertString',
+                    'defaultValue' => true,
+                );
+                $setDocblock['tags'][] = new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                    'paramName' => 'convertString',
+                    'datatype' => 'boolean',
+                    'description' => 'OPTIONAL',
+                ));
 
-				$setBody .= '
-if($value == \'CURRENT_TIMESTAMP\') {
-	$value = date(\''.$dateFormat.'\');
-} else if(is_numeric($value)) {
-	$value = date(\''.$dateFormat.'\', $value);
-} else if('.(($column['IS_NULLABLE'] == 'YES') ? '$value !== null && ' : '').'$convert_string) {
-	$value = date(\''.$dateFormat.'\', strtotime($value));
+                $setBody .= '
+if ($value == \'CURRENT_TIMESTAMP\') {
+    $value = date(\''.$dateFormat.'\');
+} else if (is_numeric($value)) {
+    $value = date(\''.$dateFormat.'\', $value);
+} else if ('.(($column['IS_NULLABLE'] == 'YES') ? '$value !== null && ' : '').'$convertString) {
+    $value = date(\''.$dateFormat.'\', strtotime($value));
 }
 ';
-			} else if($this->columnHasComment('SERIALIZED_DATA', $column)) {
-				// No special logic is needed for nulls here as serialize handles it correctly
-				$autocast = false;
-				$getBody .= '$value = unserialize($value);'."\n";
-				$setBody .= '$value = serialize($value);'."\n";
-			} else if($this->columnHasComment('BOOLEAN', $column)) {
-				$autocast = false;
-				if($column['IS_NULLABLE'] == 'YES') {
-					$getBody .= 'if($value !== null) {'."\n";
-				}
-				$getBody .= '$value = (boolean) $value;'."\n";
-				if($column['IS_NULLABLE'] == 'YES') {
-					$getBody .= 'if($value !== null) {'."\n";
-				}
+            } else if ($this->columnHasComment('SERIALIZED_DATA', $column)) {
+                // No special logic is needed for nulls here as serialize handles it correctly
+                $autocast = false;
+                $getBody .= '$value = unserialize($value);'."\n";
+                $setBody .= '$value = serialize($value);'."\n";
+            } else if ($this->columnHasComment('BOOLEAN', $column)) {
+                $autocast = false;
+                if ($column['IS_NULLABLE'] == 'YES') {
+                    $getBody .= 'if ($value !== null) {'."\n";
+                }
+                $getBody .= '$value = (boolean) $value;'."\n";
+                if ($column['IS_NULLABLE'] == 'YES') {
+                    $getBody .= 'if ($value !== null) {'."\n";
+                }
 
-				// If we cast to a boolean and then an int, PHP leans toward true too often.
-				if($column['IS_NULLABLE'] == 'YES') {
-					$setBody .= 'if($value !== null) {'."\n";
-				}
-				$setBody .= '
-if($value === true || $value == 1 || $value === \'true\' || $value === \'TRUE\') {
-	$value = 1;
+                // If we cast to a boolean and then an int, PHP leans toward true too often.
+                if ($column['IS_NULLABLE'] == 'YES') {
+                    $setBody .= 'if ($value !== null) {'."\n";
+                }
+                $setBody .= '
+if ($value === true || $value == 1 || $value === \'true\' || $value === \'TRUE\') {
+    $value = 1;
 } else {
-	$value = 0;
+    $value = 0;
 }
 ';
-				if($column['IS_NULLABLE'] == 'YES') {
-					$setBody .= '}'."\n";
-				}
-			} else if($this->columnHasComment('IP_ADDRESS', $column)) {
-				$paramType = 'string';
-				$returnType = 'string';
-				$autocast = false;
+                if ($column['IS_NULLABLE'] == 'YES') {
+                    $setBody .= '}'."\n";
+                }
+            } else if ($this->columnHasComment('IP_ADDRESS', $column)) {
+                $paramType = 'string';
+                $returnType = 'string';
+                $autocast = false;
 
-				if($column['IS_NULLABLE'] == 'YES') {
-					$getBody .= 'if($value !== null) {'."\n";
-				}
-					$getBody .= '$value = long2ip($value);'."\n";
-				if($column['IS_NULLABLE'] == 'YES') {
-					$getBody .= '}'."\n";
-				}
+                if ($column['IS_NULLABLE'] == 'YES') {
+                    $getBody .= 'if ($value !== null) {'."\n";
+                }
+                    $getBody .= '$value = long2ip($value);'."\n";
+                if ($column['IS_NULLABLE'] == 'YES') {
+                    $getBody .= '}'."\n";
+                }
 
-				if($column['IS_NULLABLE'] == 'YES') {
-					$setBody .= 'if($value !== null) {'."\n";
-				}
-					$setBody .= '$value = sprintf(\'%u\', ip2long($value));'."\n";
-				if($column['IS_NULLABLE'] == 'YES') {
-					$setBody .= '}'."\n";
-				}
-			}
+                if ($column['IS_NULLABLE'] == 'YES') {
+                    $setBody .= 'if ($value !== null) {'."\n";
+                }
+                    $setBody .= '$value = sprintf(\'%u\', ip2long($value));'."\n";
+                if ($column['IS_NULLABLE'] == 'YES') {
+                    $setBody .= '}'."\n";
+                }
+            }
 
-			// Cast the value to the correct type
-			if($autocast) {
-				if($column['IS_NULLABLE'] == 'YES' || $this->isColumnAutoIncrement($column)) {
-					$setBody .= '
-if($value !== null) {
-	$value = ('.$columnType.') $value;
+            // Cast the value to the correct type
+            if ($autocast) {
+                if ($column['IS_NULLABLE'] == 'YES' || $this->isColumnAutoIncrement($column)) {
+                    $setBody .= '
+if ($value !== null) {
+    $value = ('.$columnType.') $value;
 }'."\n";
-				} else {
-					$setBody .= '$value = ('.$columnType.') $value;'."\n";
-				}
-			}
+                } else {
+                    $setBody .= '$value = ('.$columnType.') $value;'."\n";
+                }
+            }
 
-			// Finish up the getter
-			$getBody .= 'return $value;';
-			$getDocblock['tags'][] = new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
-				'datatype' => $returnType,
-			));
-			$baseMethods[] = array(
-				'name' => 'get' . $functionName,
-				'visibility' => 'public',
-				'parameters' => $getParameters,
-				'body' => $getBody,
-				'docblock' => $getDocblock,
-			);
+            // Finish up the getter
+            $getBody .= 'return $value;';
+            $getDocblock['tags'][] = new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                'datatype' => $returnType,
+            ));
+            $baseMethods[] = array(
+                'name' => 'get' . $functionName,
+                'visibility' => 'public',
+                'parameters' => $getParameters,
+                'body' => $getBody,
+                'docblock' => $getDocblock,
+            );
 
 
-			// Finish up the setter
-			$setBody .= '$this->setColumnValue(\''.$column['COLUMN_NAME'].'\', $value);';
-			$setDocblock['tags'][] = new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
-				'paramName' => 'value',
-				'datatype' => $paramType,
-			));
-			$setDocblock['tags'][] = new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
-				'datatype' => 'void',
-			));
-			$baseMethods[] = array(
-				'name' => 'set' . $functionName,
-				'visibility' => 'public',
-				'parameters' => $setParameters,
-				'body' => $setBody,
-				'docblock' => $setDocblock,
-			);
-		}
+            // Finish up the setter
+            $setBody .= '$this->setColumnValue(\''.$column['COLUMN_NAME'].'\', $value);';
+            $setDocblock['tags'][] = new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                'paramName' => 'value',
+                'datatype' => $paramType,
+            ));
+            $setDocblock['tags'][] = new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                'datatype' => 'void',
+            ));
+            $baseMethods[] = array(
+                'name' => 'set' . $functionName,
+                'visibility' => 'public',
+                'parameters' => $setParameters,
+                'body' => $setBody,
+                'docblock' => $setDocblock,
+            );
+        }
 
-		// Add convenience methods for getting relateds rows by foreign key constraints.
-		// This allows us to cache the results in the row objects
-		// !TODO: str_replace('Tables_', 'Rows_', $tableClassName) needs to be done right so if the classes have other names it still works. Applies to all key related functions
-		foreach($table['KEYS'] as $key) {
-			$variableName = '_' . $key['REFERENCED_TABLE_NAME'] . '_row_by_' . $key['COLUMN_NAME'];
-			$functionName = $this->makeClassName('get' . $variableName, false);
-			$tableClassName = $this->getTableClassFromSchemaAndName($key['REFERENCED_TABLE_SCHEMA'], $key['REFERENCED_TABLE_NAME']);
+        // Add convenience methods for getting relateds rows by foreign key constraints.
+        // This allows us to cache the results in the row objects
+        // @TODO: str_replace('Tables_', 'Rows_', $tableClassName) needs to be done right so if the classes have other names it still works. Applies to all key related functions
+        foreach ($table['KEYS'] as $key) {
+            $variableName = $key['REFERENCED_TABLE_NAME'] . '_row_by_' . $key['COLUMN_NAME'];
+            $variableName = $this->makeClassName($variableName, false);
+            $functionName = 'get' . ucfirst($variableName);
+            $tableClassName = $this->getTableClassFromSchemaAndName($key['REFERENCED_TABLE_SCHEMA'], $key['REFERENCED_TABLE_NAME']);
 
-			$baseProperties[] = array(
-	        	'name'         => $variableName,
-	        	'visibility'   => 'protected',
-	        	'defaultValue' => array(),
-	        	'type' => $tableClassName,
-	        	'docblock' => 'Row object for ' . $key['REFERENCED_TABLE_NAME']
-	    	);
+            $baseProperties[] = array(
+                'name'         => $variableName,
+                'visibility'   => 'protected',
+                'defaultValue' => array(),
+                'type' => $tableClassName,
+                'docblock' => 'Row object for ' . $key['REFERENCED_TABLE_NAME']
+            );
 
-			$baseMethods[] = array(
-				'name' => $functionName,
-				'visibility' => 'public',
-				'parameters' => array(array(
-					'name' => 'select',
-					'defaultValue' => null,
-					'type' => 'Zend_Db_Select',
-				)),
-				'body' => '
-$key_name = ($select !== null) ? sha1($select->__toString()) : \'no_select\';
-if(!array_key_exists($key_name, $this->'.$variableName.')) {
-	$this->'.$variableName.'[$key_name] = $this->findParentRow(\''.$tableClassName.'\', \''.$key['CONSTRAINT_NAME'].'\', $select);
+            $baseMethods[] = array(
+                'name' => $functionName,
+                'visibility' => 'public',
+                'parameters' => array(array(
+                    'name' => 'select',
+                    'defaultValue' => null,
+                    'type' => 'Zend_Db_Select',
+                )),
+                'body' => '
+$keyName = ($select !== null) ? sha1($select->__toString()) : \'noSelect\';
+if (!array_key_exists($keyName, $this->'.$variableName.')) {
+    $this->'.$variableName.'[$keyName] = $this->findParentRow(\''.$tableClassName.'\', \''.$key['CONSTRAINT_NAME'].'\', $select);
 }
-return $this->'.$variableName.'[$key_name];',
-				'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-	            	'shortDescription' => 'Gets the parent row from ' . $key['REFERENCED_TABLE_NAME'] . ' by ' . $key['COLUMN_NAME'],
-	                'tags' => array(
-	                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
-	                        'paramName' => 'select',
-	                        'datatype'  => 'Zend_Db_Select|null',
-	                    )),
-	                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
-	                        'datatype'  => str_replace('Tables_', 'Rows_', $tableClassName),
-	                    )),
-	                ),
-				)),
-			);
-		}
+return $this->'.$variableName.'[$keyName];',
+                'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                    'shortDescription' => 'Gets the parent row from ' . $key['REFERENCED_TABLE_NAME'] . ' by ' . $key['COLUMN_NAME'],
+                    'tags' => array(
+                        new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                            'paramName' => 'select',
+                            'datatype'  => 'Zend_Db_Select|null',
+                        )),
+                        new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                            'datatype'  => str_replace('Tables_', 'Rows_', $tableClassName),
+                        )),
+                    ),
+                )),
+            );
+        }
 
-		// Add convenience methods for getting relateds rowsets by foreign key constraints.
-		// This allows us to cache the results in the rowset objects
-		foreach($table['DEPENDENT_KEYS'] as $key) {
-			$variableName = '_' . $key['TABLE_NAME'] . '_rowset_by_' . $key['COLUMN_NAME'];
-			$functionName = $this->makeClassName('get' . $variableName, false);
-			$tableClassName = $this->getTableClassFromSchemaAndName($key['TABLE_SCHEMA'], $key['TABLE_NAME']);
+        // Add convenience methods for getting relateds rowsets by foreign key constraints.
+        // This allows us to cache the results in the rowset objects
+        foreach ($table['DEPENDENT_KEYS'] as $key) {
+            $variableName = $key['TABLE_NAME'] . '_rowset_by_' . $key['COLUMN_NAME'];
+            $variableName = $this->makeClassName($variableName, false);
+            $functionName = 'get' . ucfirst($variableName);
+            $tableClassName = $this->getTableClassFromSchemaAndName($key['TABLE_SCHEMA'], $key['TABLE_NAME']);
 
-			$baseProperties[] = array(
-	        	'name'         => $variableName,
-	        	'visibility'   => 'protected',
-	        	'defaultValue' => array(),
-	        	'type' => $tableClassName,
-	        	'docblock' => 'Rowset object for ' . $key['TABLE_NAME']
-	    	);
+            $baseProperties[] = array(
+                'name'         => $variableName,
+                'visibility'   => 'protected',
+                'defaultValue' => array(),
+                'type' => $tableClassName,
+                'docblock' => 'Rowset object for ' . $key['TABLE_NAME']
+            );
 
-			$baseMethods[] = array(
-				'name' => $functionName,
-				'visibility' => 'public',
-				'parameters' => array(array(
-					'name' => 'select',
-					'defaultValue' => null,
-					'type' => 'Zend_Db_Select',
-				)),
-				'body' => '
-$key_name = ($select !== null) ? sha1($select->__toString()) : \'no_select\';
-if(!array_key_exists($key_name, $this->'.$variableName.')) {
-	$this->'.$variableName.'[$key_name] = $this->findDependentRowset(\''.$tableClassName.'\', \''.$key['CONSTRAINT_NAME'].'\', $select);
+            $baseMethods[] = array(
+                'name' => $functionName,
+                'visibility' => 'public',
+                'parameters' => array(array(
+                    'name' => 'select',
+                    'defaultValue' => null,
+                    'type' => 'Zend_Db_Select',
+                )),
+                'body' => '
+$keyName = ($select !== null) ? sha1($select->__toString()) : \'noSelect\';
+if (!array_key_exists($keyName, $this->'.$variableName.')) {
+    $this->'.$variableName.'[$keyName] = $this->findDependentRowset(\''.$tableClassName.'\', \''.$key['CONSTRAINT_NAME'].'\', $select);
 }
-return $this->'.$variableName.'[$key_name];',
-				'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-	            	'shortDescription' => 'Gets the dependent rowset from ' . $key['TABLE_NAME'] . ' by ' . $key['COLUMN_NAME'],
-	                'tags' => array(
-	                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
-	                        'paramName' => 'select',
-	                        'datatype'  => 'Zend_Db_Select|null',
-	                    )),
-	                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
-	                        'datatype'  => str_replace('Tables_', 'Rowsets_', $tableClassName),
-	                    )),
-	                ),
-				)),
-			);
+return $this->'.$variableName.'[$keyName];',
+                'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                    'shortDescription' => 'Gets the dependent rowset from ' . $key['TABLE_NAME'] . ' by ' . $key['COLUMN_NAME'],
+                    'tags' => array(
+                        new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                            'paramName' => 'select',
+                            'datatype'  => 'Zend_Db_Select|null',
+                        )),
+                        new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                            'datatype'  => str_replace('Tables_', 'Rowsets_', $tableClassName),
+                        )),
+                    ),
+                )),
+            );
 
-			//Are there any many-to-many relationships we can create functions for?
-				foreach($key['RELATED_KEYS'] as $related_key) {
-				$variableName = '_' . $related_key['REFERENCED_TABLE_NAME'] . '_rowset_via_' . $related_key['TABLE_NAME'] . '_by_' . $key['COLUMN_NAME'] . '_and_' . $related_key['COLUMN_NAME'];
-				$functionName = $this->makeClassName('get' . $variableName, false);
-				$destinationTableClassName = $this->getTableClassFromSchemaAndName($related_key['REFERENCED_TABLE_SCHEMA'], $related_key['REFERENCED_TABLE_NAME']);
-				$intersectionTableClassName = $this->getTableClassFromSchemaAndName($related_key['TABLE_SCHEMA'], $related_key['TABLE_NAME']);
+            //Are there any many-to-many relationships we can create functions for?
+            foreach ($key['RELATED_KEYS'] as $relatedKey) {
+                $variableName = $relatedKey['REFERENCED_TABLE_NAME'] . '_rowset_via_' . $relatedKey['TABLE_NAME'] . '_by_' . $key['COLUMN_NAME'] . '_and_' . $relatedKey['COLUMN_NAME'];
+                $variableName = $this->makeClassName($variableName, false);
+                $functionName = 'get' . ucfirst($variableName);
+                $destinationTableClassName = $this->getTableClassFromSchemaAndName($relatedKey['REFERENCED_TABLE_SCHEMA'], $relatedKey['REFERENCED_TABLE_NAME']);
+                $intersectionTableClassName = $this->getTableClassFromSchemaAndName($relatedKey['TABLE_SCHEMA'], $relatedKey['TABLE_NAME']);
 
-				$baseProperties[] = array(
-		        	'name'         => $variableName,
-		        	'visibility'   => 'protected',
-		        	'defaultValue' => array(),
-		        	'type' => $tableClassName,
-		        	'docblock' => 'Rowset object for ' . $related_key['REFERENCED_TABLE_NAME']
-		    	);
+                $baseProperties[] = array(
+                    'name'         => $variableName,
+                    'visibility'   => 'protected',
+                    'defaultValue' => array(),
+                    'type' => $tableClassName,
+                    'docblock' => 'Rowset object for ' . $relatedKey['REFERENCED_TABLE_NAME']
+                );
 
-				$baseMethods[] = array(
-					'name' => $functionName,
-					'visibility' => 'public',
-					'parameters' => array(array(
-						'name' => 'select',
-						'defaultValue' => null,
-						'type' => 'Zend_Db_Select',
-					)),
-					'body' => '
-$key_name = ($select !== null) ? sha1($select->__toString()) : \'no_select\';
-if(!array_key_exists($key_name, $this->'.$variableName.')) {
-	$this->'.$variableName.'[$key_name] = $this->findManyToManyRowset(\''.$destinationTableClassName.'\', \''.$intersectionTableClassName.'\', \''.$key['CONSTRAINT_NAME'].'\', \''.$related_key['CONSTRAINT_NAME'].'\', $select);
+                $baseMethods[] = array(
+                    'name' => $functionName,
+                    'visibility' => 'public',
+                    'parameters' => array(array(
+                        'name' => 'select',
+                        'defaultValue' => null,
+                        'type' => 'Zend_Db_Select',
+                    )),
+                    'body' => '
+$keyName = ($select !== null) ? sha1($select->__toString()) : \'noSelect\';
+if (!array_key_exists($key_name, $this->'.$variableName.')) {
+    $this->'.$variableName.'[$keyName] = $this->findManyToManyRowset(\''.$destinationTableClassName.'\', \''.$intersectionTableClassName.'\', \''.$key['CONSTRAINT_NAME'].'\', \''.$relatedKey['CONSTRAINT_NAME'].'\', $select);
 }
-return $this->'.$variableName.'[$key_name];',
-					'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-		            	'shortDescription' => 'Gets the many-to-many rowset from ' . $related_key['REFERENCED_TABLE_NAME'] . ' by ' . $key['COLUMN_NAME'] . ' and by ' . $related_key['COLUMN_NAME'],
-		                'tags' => array(
-		                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
-		                        'paramName' => 'select',
-		                        'datatype'  => 'Zend_Db_Select|null',
-		                    )),
-		                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
-		                        'datatype'  => str_replace('Tables_', 'Rowsets_', $destinationTableClassName),
-		                    )),
-		                ),
-					)),
-				);
-			}
-		}
+return $this->'.$variableName.'[$keyName];',
+                    'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                        'shortDescription' => 'Gets the many-to-many rowset from ' . $relatedKey['REFERENCED_TABLE_NAME'] . ' by ' . $key['COLUMN_NAME'] . ' and by ' . $relatedKey['COLUMN_NAME'],
+                        'tags' => array(
+                            new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                                'paramName' => 'select',
+                                'datatype'  => 'Zend_Db_Select|null',
+                            )),
+                            new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                                'datatype'  => str_replace('Tables_', 'Rowsets_', $destinationTableClassName),
+                            )),
+                        ),
+                    )),
+                );
+            }
+        }
 
-		$baseDocBlock = $baseClassName . "\n\n";
-		$baseDocBlock .= 'Generated class file for row '. $table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'] . "\n";
-		$baseDocBlock .= 'Any changes here will be overridden.';
+        $baseDocBlock = $baseClassName . "\n\n";
+        $baseDocBlock .= 'Generated class file for row '. $table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'] . "\n";
+        $baseDocBlock .= 'Any changes here will be overridden.';
 
-		$base = new Zend_CodeGenerator_Php_Class();
-		$base->setName($baseClassName);
-		$base->setDocblock($baseDocBlock);
-		$base->setAbstract(true);
-		$base->setProperties($baseProperties);
-		$base->setMethods($baseMethods);
-		$base->setExtendedClass($this->base_class['row']);
-		$baseCode = $base->generate();
+        $base = new Zend_CodeGenerator_Php_Class();
+        $base->setName($baseClassName);
+        $base->setDocblock($baseDocBlock);
+        $base->setAbstract(true);
+        $base->setProperties($baseProperties);
+        $base->setMethods($baseMethods);
+        $base->setExtendedClass($this->baseClass['row']);
+        $baseCode = $base->generate();
 
-		$this->writeFile($baseFile, $baseCode);
-		$this->output('done');
+        $this->writeFile($baseFile, $baseCode);
+        $this->output('done');
 
-		$classFile = $this->projectRoot . $this->paths['application'] . $this->paths['modules'] . $this->paths['rows'] . $table['namespace'] . '/' . $table['classNamePartial'] . '.php';
-		if(!file_exists($classFile)) {
-			$className = $this->convertFileNameToClassName($classFile, $this->paths['application'] . $this->paths['modules']);
-			$this->output($className . '... ', false);
+        $classFile = $this->projectRoot . $this->paths['application'] . $this->paths['modules'] . $this->paths['rows'] . $table['namespace'] . '/' . $table['classNamePartial'] . '.php';
+        if (!file_exists($classFile)) {
+            $className = $this->convertFileNameToClassName($classFile, $this->paths['application'] . $this->paths['modules']);
+            $this->output($className . '... ', false);
 
-			$docBlock = $className . "\n\n";
-			$docBlock .= 'Row for ' . $table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'] . "\n\n";
-			$docBlock .= 'This class is a descendant of '.$this->parent_class['row'].' and can be used to add customizations to ' . $baseClassName;
+            $docBlock = $className . "\n\n";
+            $docBlock .= 'Row for ' . $table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'] . "\n\n";
+            $docBlock .= 'This class is a descendant of '.$this->parentClass['row'].' and can be used to add customizations to ' . $baseClassName;
 
-			$class = new Zend_CodeGenerator_Php_Class();
-			$class->setName($className);
-			$class->setDocblock($docBlock);
-			$class->setExtendedClass($baseClassName);
-			$classCode = $class->generate();
+            $class = new Zend_CodeGenerator_Php_Class();
+            $class->setName($className);
+            $class->setDocblock($docBlock);
+            $class->setExtendedClass($baseClassName);
+            $classCode = $class->generate();
 
-			$this->writeFile($classFile, $classCode);
-			$this->output('done');
-		}
+            $this->writeFile($classFile, $classCode);
+            $this->output('done');
+        }
 
-		return true;
-	}
+        return true;
+    }
 
-	/**
-	 * Creates the application specific row class. Aborts early if class already exists
-	 *
-	 * @return void
-	 */
-	public function generateBaseRow() {
-		$generated_base_path = $this->paths['library'] . $this->paths['generated'] . $this->paths['base'];
-		$this->makeDirectory($generated_base_path);
+    /**
+     * Creates the application specific row class. Aborts early if class already exists
+     *
+     * @return void
+     */
+    public function generateBaseRow() {
+        $generatedBasePath = $this->paths['library'] . $this->paths['generated'] . $this->paths['base'];
+        $this->makeDirectory($generatedBasePath);
 
-		$baseFile = $this->projectRoot . $generated_base_path . 'Row.php';
-		$baseClassName = $this->convertFileNameToClassName($baseFile, $this->paths['library']);
-		$this->output($baseClassName . '... ', false);
+        $baseFile = $this->projectRoot . $generatedBasePath . 'Row.php';
+        $baseClassName = $this->convertFileNameToClassName($baseFile, $this->paths['library']);
+        $this->output($baseClassName . '... ', false);
 
-		/* =================== */
-		/* = Base Properties = */
-		/* =================== */
+        /* =================== */
+        /* = Base Properties = */
+        /* =================== */
 
-		$baseProperties = array();
+        $baseProperties = array();
 
-		$baseProperties[] = array(
-			'name' => '_functionNameFilter',
-			'visibility' => 'protected',
-			'defaultValue' => null,
-			'docblock' => 'The filter used to convert strings to function names',
-		);
+        $baseProperties[] = array(
+            'name' => '_functionNameFilter',
+            'visibility' => 'protected',
+            'defaultValue' => null,
+            'docblock' => 'The filter used to convert strings to function names',
+        );
 
-		$baseProperties[] = array(
-			'name' => '_columnNameFilter',
-			'visibility' => 'protected',
-			'defaultValue' => null,
-			'docblock' => 'The filter used to convert function names to strings',
-		);
+        $baseProperties[] = array(
+            'name' => '_columnNameFilter',
+            'visibility' => 'protected',
+            'defaultValue' => null,
+            'docblock' => 'The filter used to convert function names to strings',
+        );
 
-		/* ================ */
-		/* = Base Methods = */
-		/* ================ */
+        /* ================ */
+        /* = Base Methods = */
+        /* ================ */
 
-		$baseMethods = array();
+        $baseMethods = array();
 
-		// The construct needs to be rewritten to set $_data with setFromArray() to ensure any custom setter logic is called for each column
-		$__construct = array(
-			'name' => '__construct',
-			'visibility' => 'public',
-			'parameters' => array(
-				array(
-					'name' => 'config',
-					'type' => 'array',
-					'defaultValue' => array(),
-				),
-			),
-			'body' => '
+        // The construct needs to be rewritten to set $_data with setFromArray() to ensure any custom setter logic is called for each column
+        $__construct = array(
+            'name' => '__construct',
+            'visibility' => 'public',
+            'parameters' => array(
+                array(
+                    'name' => 'config',
+                    'type' => 'array',
+                    'defaultValue' => array(),
+                ),
+            ),
+            'body' => '
 if (isset($config[\'table\']) && $config[\'table\'] instanceof Zend_Db_Table_Abstract) {
     $this->_table = $config[\'table\'];
     $this->_tableClass = get_class($this->_table);
@@ -1288,269 +1311,269 @@ if (($table = $this->_getTable())) {
 }
 
 $this->init();
-			',
-			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-				'shortDescription' => 'Constructor overwritten to use setter methods',
-				'tags' => array(
-					new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
-						'paramName' => 'config',
-						'datatype' => 'array',
-						'description' => 'OPTIONAL Array of user-specified config options.',
-					)),
-					new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
-						'datatype' => 'void',
-					)),
-					new Zend_CodeGenerator_Php_Docblock_Tag(array(
-						'name' => 'throws',
-						'description' => 'Zend_Db_Table_Row_Exception',
-					)),
-				)
-			)),
-		);
-		$baseMethods[] = $__construct;
+            ',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Constructor overwritten to use setter methods',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'config',
+                        'datatype' => 'array',
+                        'description' => 'OPTIONAL Array of user-specified config options.',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'datatype' => 'void',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag(array(
+                        'name' => 'throws',
+                        'description' => 'Zend_Db_Table_Row_Exception',
+                    )),
+                )
+            )),
+        );
+        $baseMethods[] = $__construct;
 
-		// __call needs to be updated so that requests for getColumnName or setColumnName are properly routed
-		$__call = array(
-			'name' => '__call',
-			'visibility' => 'public',
-			'parameters' => array(
-				array(
-					'name' => 'method',
-				),
-				array(
-					'name' => 'args',
-					'type' => 'array',
-				),
-			),
-			'body' => '
+        // __call needs to be updated so that requests for getColumnName or setColumnName are properly routed
+        $__call = array(
+            'name' => '__call',
+            'visibility' => 'public',
+            'parameters' => array(
+                array(
+                    'name' => 'method',
+                ),
+                array(
+                    'name' => 'args',
+                    'type' => 'array',
+                ),
+            ),
+            'body' => '
 $columnName = $this->getColumnName($method);
 
-if(strpos($columnName, \'get_\') === 0) {
-	$columnName = str_replace(\'get_\', \'\', $columnName);
-	return $this->getColumnValue($columnName);
-} else if(strpos($columnName, \'set_\') === 0) {
-	$columnName = str_replace(\'set_\', \'\', $columnName);
-	return $this->setColumnValue($columnName, $args[0]);
+if (strpos($columnName, \'get_\') === 0) {
+    $columnName = str_replace(\'get_\', \'\', $columnName);
+    return $this->getColumnValue($columnName);
+} else if (strpos($columnName, \'set_\') === 0) {
+    $columnName = str_replace(\'set_\', \'\', $columnName);
+    return $this->setColumnValue($columnName, $args[0]);
 }
 
 return parent::__call($method, $args);
-			',
-			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-				'shortDescription' => 'Turns get and set method calls to __get and __set calls',
-				'tags' => array(
-					new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
-						'paramName' => 'method',
-						'datatype' => 'string',
-					)),
-					new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
-						'paramName' => 'args',
-						'datatype' => 'array',
-						'description' => 'OPTIONAL Zend_Db_Table_Select query modifier',
-					)),
-					new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
-						'datatype' => 'Zend_Db_Table_Row_Abstract|Zend_Db_Table_Rowset_Abstract',
-					)),
-					new Zend_CodeGenerator_Php_Docblock_Tag(array(
-						'name' => 'throws',
-						'description' => 'Zend_Db_Table_Row_Exception If an invalid method is called.',
-					)),
-				)
-			)),
-		);
-		$baseMethods[] = $__call;
+            ',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Turns get and set method calls to __get and __set calls',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'method',
+                        'datatype' => 'string',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'args',
+                        'datatype' => 'array',
+                        'description' => 'OPTIONAL Zend_Db_Table_Select query modifier',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'datatype' => 'Zend_Db_Table_Row_Abstract|Zend_Db_Table_Rowset_Abstract',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag(array(
+                        'name' => 'throws',
+                        'description' => 'Zend_Db_Table_Row_Exception If an invalid method is called.',
+                    )),
+                )
+            )),
+        );
+        $baseMethods[] = $__call;
 
-		// __get needs to be overwritten so the logic in the custom getters are applied instead of accesing the value directly
-		$__get = array(
-			'name' => '__get',
-			'visibility' => 'public',
-			'parameters' => array(
-				array(
-					'name' => 'columnName',
-				),
-			),
-			'body' => '
+        // __get needs to be overwritten so the logic in the custom getters are applied instead of accesing the value directly
+        $__get = array(
+            'name' => '__get',
+            'visibility' => 'public',
+            'parameters' => array(
+                array(
+                    'name' => 'columnName',
+                ),
+            ),
+            'body' => '
 $functionName = $this->getFunctionName(\'get_\' . $columnName);
 return $this->$functionName();
-			',
-			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-				'shortDescription' => 'Redirects __get to a getColumnName method',
-				'tags' => array(
-					new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
-						'paramName' => 'columnName',
-						'datatype' => 'string',
-					)),
-					new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
-						'datatype' => 'mixed',
-					)),
-				)
-			)),
-		);
-		$baseMethods[] = $__get;
+            ',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Redirects __get to a getColumnName method',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'columnName',
+                        'datatype' => 'string',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'datatype' => 'mixed',
+                    )),
+                )
+            )),
+        );
+        $baseMethods[] = $__get;
 
-		// __set needs to be overwritten so the logic in the custom setters are applied instead of changing the value directly
-		$__set = array(
-			'name' => '__set',
-			'visibility' => 'public',
-			'parameters' => array(
-				array(
-					'name' => 'columnName',
-				),
-				array(
-					'name' => 'value',
-				),
-			),
-			'body' => '
+        // __set needs to be overwritten so the logic in the custom setters are applied instead of changing the value directly
+        $__set = array(
+            'name' => '__set',
+            'visibility' => 'public',
+            'parameters' => array(
+                array(
+                    'name' => 'columnName',
+                ),
+                array(
+                    'name' => 'value',
+                ),
+            ),
+            'body' => '
 $functionName = $this->getFunctionName(\'set_\' . $columnName);
 return $this->$functionName($value);
-			',
-			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-				'shortDescription' => 'Redirects __set to a getColumnName method',
-				'tags' => array(
-					new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
-						'paramName' => 'columnName',
-						'datatype' => 'string',
-					)),
-					new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
-						'paramName' => 'value',
-						'datatype' => 'mixed',
-					)),
-					new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
-						'datatype' => 'void',
-					)),
-				)
-			)),
-		);
-		$baseMethods[] = $__set;
+            ',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Redirects __set to a getColumnName method',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'columnName',
+                        'datatype' => 'string',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'value',
+                        'datatype' => 'mixed',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'datatype' => 'void',
+                    )),
+                )
+            )),
+        );
+        $baseMethods[] = $__set;
 
-		// getColumnValue does the same work that __get used to do
-		$getColumnValue = array(
-			'name' => 'getColumnValue',
-			'visibility' => 'protected',
-			'parameters' => array(
-				array(
-					'name' => 'columnName',
-				),
-			),
-			'body' => 'return parent::__get($columnName);',
-			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-				'shortDescription' => 'Retrieve row field value',
-				'tags' => array(
-					new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
-						'paramName' => 'columnName',
-						'datatype' => 'string',
-						'description' => 'The user-specified column name.',
-					)),
-					new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
-						'datatype' => 'string',
-						'description' => 'The corresponding column value.',
-					)),
-					new Zend_CodeGenerator_Php_Docblock_Tag(array(
-						'name' => 'throws',
-						'description' => 'Zend_Db_Table_Row_Exception if the $columnName is not a column in the row.',
-					)),
-				)
-			))
-		);
-		$baseMethods[] = $getColumnValue;
+        // getColumnValue does the same work that __get used to do
+        $getColumnValue = array(
+            'name' => 'getColumnValue',
+            'visibility' => 'protected',
+            'parameters' => array(
+                array(
+                    'name' => 'columnName',
+                ),
+            ),
+            'body' => 'return parent::__get($columnName);',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Retrieve row field value',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'columnName',
+                        'datatype' => 'string',
+                        'description' => 'The user-specified column name.',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'datatype' => 'string',
+                        'description' => 'The corresponding column value.',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag(array(
+                        'name' => 'throws',
+                        'description' => 'Zend_Db_Table_Row_Exception if the $columnName is not a column in the row.',
+                    )),
+                )
+            ))
+        );
+        $baseMethods[] = $getColumnValue;
 
-		// getColumnValue does the same work that __set used to do
-		$setColumnValue = array(
-			'name' => 'setColumnValue',
-			'visibility' => 'protected',
-			'parameters' => array(
-				array(
-					'name' => 'columnName',
-				),
-				array(
-					'name' => 'value',
-				),
-			),
-			'body' => 'return parent::__set($columnName, $value);',
-			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-				'shortDescription' => 'Set row field value',
-				'tags' => array(
-					new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
-						'paramName' => 'columnName',
-						'datatype' => 'string',
-						'description' => 'The column key.',
-					)),
-					new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
-						'paramName' => 'value',
-						'datatype' => 'mixed',
-						'description' => 'The value for the property.',
-					)),
-					new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
-						'datatype' => 'void',
-					)),
-					new Zend_CodeGenerator_Php_Docblock_Tag(array(
-						'name' => 'throws',
-						'description' => 'Zend_Db_Table_Row_Exception',
-					)),
-				)
-			))
-		);
-		$baseMethods[] = $setColumnValue;
+        // getColumnValue does the same work that __set used to do
+        $setColumnValue = array(
+            'name' => 'setColumnValue',
+            'visibility' => 'protected',
+            'parameters' => array(
+                array(
+                    'name' => 'columnName',
+                ),
+                array(
+                    'name' => 'value',
+                ),
+            ),
+            'body' => 'return parent::__set($columnName, $value);',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Set row field value',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'columnName',
+                        'datatype' => 'string',
+                        'description' => 'The column key.',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'value',
+                        'datatype' => 'mixed',
+                        'description' => 'The value for the property.',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'datatype' => 'void',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag(array(
+                        'name' => 'throws',
+                        'description' => 'Zend_Db_Table_Row_Exception',
+                    )),
+                )
+            ))
+        );
+        $baseMethods[] = $setColumnValue;
 
-		$getPrimaryKeys = array(
-			'name' => 'getPrimaryKeys',
-			'visibility' => 'public',
-			'body' => 'return $this->_getPrimaryKey();',
-			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-				'shortDescription' => 'Returns the rows primary key fields',
-				'tags' => array(
-					new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
-						'datatype' => 'array',
-					)),
-				),
-			)),
-		);
-		$baseMethods[] = $getPrimaryKeys;
+        $getPrimaryKeys = array(
+            'name' => 'getPrimaryKeys',
+            'visibility' => 'public',
+            'body' => 'return $this->_getPrimaryKey();',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Returns the rows primary key fields',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'datatype' => 'array',
+                    )),
+                ),
+            )),
+        );
+        $baseMethods[] = $getPrimaryKeys;
 
-		// toArray changes to pull the data from the custom getters instead of pulling the data directly
-		$toArray = array(
-			'name' => 'toArray',
-			'body' => '
+        // toArray changes to pull the data from the custom getters instead of pulling the data directly
+        $toArray = array(
+            'name' => 'toArray',
+            'body' => '
 $data = array();
 
-foreach($this->_data as $columnName => $value) {
-	$functionName = $this->getFunctionName(\'get_\' . $columnName);
-	$data[$columnName] = $this->$functionName();
+foreach ($this->_data as $columnName => $value) {
+    $functionName = $this->getFunctionName(\'get_\' . $columnName);
+    $data[$columnName] = $this->$functionName();
 }
 
 return $data;
-			',
-			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-				'shortDescription' => 'Returns the column/value data as an array.',
-				'tags' => array(
-					new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
-						'datatype' => 'array',
-					))
-				),
-			)),
-		);
-		$baseMethods[] = $toArray;
+            ',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Returns the column/value data as an array.',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'datatype' => 'array',
+                    ))
+                ),
+            )),
+        );
+        $baseMethods[] = $toArray;
 
-		// setFromArray changes to use the custom setters instead of editing the data directly
-		$setFromArray = array(
-			'name' => 'setFromArray',
-			'parameters' => array(
-				array(
-					'name' => 'data',
-					'type' => 'array',
-				),
-			),
-			'body' => '
+        // setFromArray changes to use the custom setters instead of editing the data directly
+        $setFromArray = array(
+            'name' => 'setFromArray',
+            'parameters' => array(
+                array(
+                    'name' => 'data',
+                    'type' => 'array',
+                ),
+            ),
+            'body' => '
 $data = array_intersect_key($data, $this->_data);
 
-foreach($data as $columnName => $value) {
-	$functionName = $this->getFunctionName(\'set_\' . $columnName);
-	$this->$functionName($value);
+foreach ($data as $columnName => $value) {
+    $functionName = $this->getFunctionName(\'set_\' . $columnName);
+    $this->$functionName($value);
 }
 
 return $this;
-			',
-			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-            	'shortDescription' => 'Sets all data in the row from an array. Overwrites base so that we call setColumnName instead of __set',
+            ',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Sets all data in the row from an array. Overwrites base so that we call setColumnName instead of __set',
                 'tags' => array(
                     new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
                         'paramName' => 'data',
@@ -1561,601 +1584,608 @@ return $this;
                         'description' => 'Provides a fluent interface',
                     )),
                 ),
-			)),
-		);
-		$baseMethods[] = $setFromArray;
+            )),
+        );
+        $baseMethods[] = $setFromArray;
 
-		$getFunctionName = array(
-			'name' => 'getFunctionName',
-			'visibility' => 'protected',
-			'parameters' => array(
-				array(
-					'name' => 'functionName',
-				),
-			),
-			'body' => '
-if($this->_functionNameFilter === null) {
-	$this->_functionNameFilter = new Zend_Filter_Word_UnderscoreToCamelCase();
+        $getFunctionName = array(
+            'name' => 'getFunctionName',
+            'visibility' => 'protected',
+            'parameters' => array(
+                array(
+                    'name' => 'functionName',
+                ),
+            ),
+            'body' => '
+if ($this->_functionNameFilter === null) {
+    $this->_functionNameFilter = new Zend_Filter_Word_UnderscoreToCamelCase();
 }
 
 return lcfirst($this->_functionNameFilter->filter($functionName));
-			',
-			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-				'shortDescription' => 'Converts a string to the function name',
-				'tags' => array(
-					new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
-						'paramName' => 'functionName',
-						'datatype' => 'string',
-					)),
-					new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
-						'datatype' => 'string',
-					)),
-				)
-			))
-		);
-		$baseMethods[] = $getFunctionName;
+            ',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Converts a string to the function name',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'functionName',
+                        'datatype' => 'string',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'datatype' => 'string',
+                    )),
+                )
+            ))
+        );
+        $baseMethods[] = $getFunctionName;
 
-		$getColumnName = array(
-			'name' => 'getColumnName',
-			'visibility' => 'protected',
-			'parameters' => array(
-				array(
-					'name' => 'columnName',
-				),
-			),
-			'body' => '
-if($this->_columnNameFilter === null) {
-	$this->_columnNameFilter = new Zend_Filter_Word_CamelCaseToUnderscore();
+        $getColumnName = array(
+            'name' => 'getColumnName',
+            'visibility' => 'protected',
+            'parameters' => array(
+                array(
+                    'name' => 'columnName',
+                ),
+            ),
+            'body' => '
+if ($this->_columnNameFilter === null) {
+    $this->_columnNameFilter = new Zend_Filter_Word_CamelCaseToUnderscore();
 }
 
 return strtolower($this->_columnNameFilter->filter($columnName));
-			',
-			'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-				'shortDescription' => 'Converts a string to a column name',
-				'tags' => array(
-					new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
-						'paramName' => 'columnName',
-						'datatype' => 'string',
-					)),
-					new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
-						'datatype' => 'string',
-					)),
-				)
-			))
-		);
-		$baseMethods[] = $getColumnName;
+            ',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Converts a string to a column name',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'columnName',
+                        'datatype' => 'string',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'datatype' => 'string',
+                    )),
+                )
+            ))
+        );
+        $baseMethods[] = $getColumnName;
 
-		$baseDocBlock = $baseClassName . "\n\n";
-		$baseDocBlock .= 'Generated base class file for rows' . "\n";
-		$baseDocBlock .= 'Any changes here will be overridden.';
+        $baseDocBlock = $baseClassName . "\n\n";
+        $baseDocBlock .= 'Generated base class file for rows' . "\n";
+        $baseDocBlock .= 'Any changes here will be overridden.';
 
-		$base = new Zend_CodeGenerator_Php_Class();
-		$base->setName($baseClassName);
-		$base->setDocblock($baseDocBlock);
-		$base->setAbstract(true);
-		$base->setProperties($baseProperties);
-		$base->setMethods($baseMethods);
-		$base->setExtendedClass($this->parent_class['row']);
-		$baseCode = $base->generate();
+        $base = new Zend_CodeGenerator_Php_Class();
+        $base->setName($baseClassName);
+        $base->setDocblock($baseDocBlock);
+        $base->setAbstract(true);
+        $base->setProperties($baseProperties);
+        $base->setMethods($baseMethods);
+        $base->setExtendedClass($this->parentClass['row']);
+        $baseCode = $base->generate();
 
-		$this->writeFile($baseFile, $baseCode);
-		$this->output('done');
+        $this->writeFile($baseFile, $baseCode);
+        $this->output('done');
 
-		$base_base_path = $this->paths['application'] . $this->paths['modules'] . $this->paths['base'];
-		$this->makeDirectory($base_base_path);
+        $baseBasePath = $this->paths['application'] . $this->paths['modules'] . $this->paths['base'];
+        $this->makeDirectory($baseBasePath);
 
-		$classFile = $this->projectRoot . $base_base_path . 'Row.php';
-		$className = $this->convertFileNameToClassName($classFile, $this->paths['application'] . $this->paths['modules']);
-		$this->base_class['row'] = $className;
-		if(!file_exists($classFile)) {
-			$this->output($className . '... ', false);
+        $classFile = $this->projectRoot . $baseBasePath . 'Row.php';
+        $className = $this->convertFileNameToClassName($classFile, $this->paths['application'] . $this->paths['modules']);
+        $this->baseClass['row'] = $className;
+        if (!file_exists($classFile)) {
+            $this->output($className . '... ', false);
 
-			$docBlock = $className . "\n\n";
-			$docBlock .= 'This class can be used to customize '.$this->parent_class['row'].' with application specific logic. ';
-			$docBlock .= 'All other row classes extend from this class.';
+            $docBlock = $className . "\n\n";
+            $docBlock .= 'This class can be used to customize '.$this->parentClass['row'].' with application specific logic. ';
+            $docBlock .= 'All other row classes extend from this class.';
 
-			$class = new Zend_CodeGenerator_Php_Class();
-			$class->setName($className);
-			$class->setDocblock($docBlock);
-			$class->setExtendedClass($baseClassName);
-			$classCode = $class->generate();
+            $class = new Zend_CodeGenerator_Php_Class();
+            $class->setName($className);
+            $class->setDocblock($docBlock);
+            $class->setExtendedClass($baseClassName);
+            $classCode = $class->generate();
 
-			$this->writeFile($classFile, $classCode);
-			$this->output('done');
-		}
+            $this->writeFile($classFile, $classCode);
+            $this->output('done');
+        }
 
-		return true;
-	}
+        return true;
+    }
 
-	/**
-	 * Returns the row filename for a given table
-	 *
-	 * @param array $table
-	 * @return string $fileName
-	 */
-	protected function getRowFile($table) {
-		$this->createDefaultPaths(array(
-			'rows' => 'Rows/',
-		));
-		$fileName = $this->projectRoot . $this->paths['application'] . $this->paths['modules'] . $this->paths['rows'] . $table['namespace'] . '/' . $table['classNamePartial'] . '.php';
-		return $fileName;
-	}
+    /**
+     * Returns the row filename for a given table
+     *
+     * @param array $table
+     *
+     * @return string $fileName
+     */
+    protected function getRowFile($table) {
+        $this->createDefaultPaths(array(
+            'rows' => 'Rows/',
+        ));
+        $fileName = $this->projectRoot . $this->paths['application'] . $this->paths['modules'] . $this->paths['rows'] . $table['namespace'] . '/' . $table['classNamePartial'] . '.php';
+        return $fileName;
+    }
 
-	/**
-	 * Returns the row class for a given table
-	 *
-	 * @param array $table
-	 * @return string $className
-	 */
-	protected function getRowClass($table) {
-		$fileName = $this->getRowFile($table);
-		$className = $this->convertFileNameToClassName($fileName, $this->paths['application'] . $this->paths['modules']);
-		return $className;
-	}
+    /**
+     * Returns the row class for a given table
+     *
+     * @param array $table
+     *
+     * @return string $className
+     */
+    protected function getRowClass($table) {
+        $fileName = $this->getRowFile($table);
+        $className = $this->convertFileNameToClassName($fileName, $this->paths['application'] . $this->paths['modules']);
+        return $className;
+    }
 
 /*===============================
 ** Form Generator
 **===============================*/
 
-	/**
-	 * Master function to create the form class for all tables in every databases requested
-	 *
-	 * @return void
-	 */
-	public function generateForms() {
-		$this->output('==Form Generator Initiated==');
-		$this->generateBaseForm();
+    /**
+     * Master function to create the form class for all tables in every databases requested
+     *
+     * @return void
+     */
+    public function generateForms() {
+        $this->output('==Form Generator Initiated==');
+        $this->generateBaseForm();
 
-		$this->createDefaultPaths(array(
-			'forms' => 'Forms/',
-		));
-		$application_base_path = $this->paths['application'] . $this->paths['modules'] . $this->paths['forms'];
-		$generated_base_path = $this->paths['library'] . $this->paths['generated'] . $this->paths['forms'];
+        $this->createDefaultPaths(array(
+            'forms' => 'Forms/',
+        ));
+        $applicationBasePath = $this->paths['application'] . $this->paths['modules'] . $this->paths['forms'];
+        $generatedBasePath = $this->paths['library'] . $this->paths['generated'] . $this->paths['forms'];
 
-		$this->makeDirectory($application_base_path);
-		$this->makeDirectory($generated_base_path);
+        $this->makeDirectory($applicationBasePath);
+        $this->makeDirectory($generatedBasePath);
 
-		foreach($this->databases as $database) {
-			$ns = $this->makeNamespace($database);
-			$this->makeDirectory($application_base_path . $ns);
-			$this->makeDirectory($generated_base_path . $ns);
+        foreach ($this->databases as $database) {
+            $namespace = $this->makeNamespace($database);
+            $this->makeDirectory($applicationBasePath . $namespace);
+            $this->makeDirectory($generatedBasePath . $namespace);
 
-			$tables = $this->getTables($database);
-			foreach($tables as $table) {
-				$results = $this->generateForm($table);
-				if(!$results) {
-					$this->output('Form class could not be created for ' . $database . '.' . $table['TABLE_NAME']);
-				}
-			}
-		}
-		$this->output('==Form Generator Complete==');
-	}
+            $tables = $this->getTables($database);
+            foreach ($tables as $table) {
+                $results = $this->generateForm($table);
+                if (!$results) {
+                    $this->output('Form class could not be created for ' . $database . '.' . $table['TABLE_NAME']);
+                }
+            }
+        }
+        $this->output('==Form Generator Complete==');
+    }
 
-	/**
-	 * Delegate function that does the actual work of creating the form classes
-	 *
-	 * @param array $table
-	 * @return boolean
-	 */
-	protected function generateForm($table) {
-		$baseFile = $this->projectRoot . $this->paths['library'] . $this->paths['generated'] . $this->paths['forms'] . $table['namespace'] . '/' . $table['classNamePartial'] . '.php';
-		$baseClassName = $this->convertFileNameToClassName($baseFile, $this->paths['library']);
-		$this->output($baseClassName . '... ', false);
+    /**
+     * Delegate function that does the actual work of creating the form classes
+     *
+     * @param array $table
+     *
+     * @return boolean
+     */
+    protected function generateForm($table) {
+        $baseFile = $this->projectRoot . $this->paths['library'] . $this->paths['generated'] . $this->paths['forms'] . $table['namespace'] . '/' . $table['classNamePartial'] . '.php';
+        $baseClassName = $this->convertFileNameToClassName($baseFile, $this->paths['library']);
+        $this->output($baseClassName . '... ', false);
 
-		$baseProperties = array();
-		$baseMethods = array();
+        $baseProperties = array();
+        $baseMethods = array();
 
-		foreach($table['COLUMNS'] as $column) {
-			$label = $this->getColumnLabel($column);
-			$inputName = $this->getColumnInputName($table, $column);
-			$variableName = preg_replace('/[^\w_]/', '', $inputName);
-			$element = $this->getColumnFormElement($column);
-			$maxLength = $this->getColumnMaxLength($column);
-			$validators = $this->getColumnValidators($column);
-			$filters = $this->getColumnFilters($column);
+        foreach ($table['COLUMNS'] as $column) {
+            $label = $this->getColumnLabel($column);
+            $inputName = $this->getColumnInputName($table, $column);
+            $variableName = preg_replace('/[^\w_]/', '', $inputName);
+            $element = $this->getColumnFormElement($column);
+            $maxLength = $this->getColumnMaxLength($column);
+            $validators = $this->getColumnValidators($column);
+            $filters = $this->getColumnFilters($column);
 
-			$inputOptions = array();
-			$inputAttributes = array();
+            $inputOptions = array();
+            $inputAttributes = array();
 
-			if(count($validators)) {
-				$inputOptions['validators'] = $validators;
-			}
-			if(count($filters)) {
-				$inputOptions['filters'] = $filters;
-			}
-			if($label !== false) {
-				$inputOptions['label'] = $label;
-			}
-			if(!empty($maxLength)) {
-				$inputAttributes['maxlength'] = $maxLength;
-			}
-			$inputOptions = $this->convertToPhpCodeString($inputOptions);
+            if (count($validators)) {
+                $inputOptions['validators'] = $validators;
+            }
+            if (count($filters)) {
+                $inputOptions['filters'] = $filters;
+            }
+            if ($label !== false) {
+                $inputOptions['label'] = $label;
+            }
+            if (!empty($maxLength)) {
+                $inputAttributes['maxlength'] = $maxLength;
+            }
+            $inputOptions = $this->convertToPhpCodeString($inputOptions);
 
-			$codeCreateElements = "\$$variableName = new $element( '$inputName',\n\t$inputOptions\n);";
-			if(count($inputAttributes)) {
-				foreach($inputAttributes as $key => $value ) {
-					$codeCreateElements .= "\n\$$variableName" . "->setAttrib('$key', '$value');\n";
-					if($key == 'maxlength') {
-						if($value > 1000000) {
-							$value = 1000000;
-						}
-						if($this->isColumnNumeric($column)) {
-							// stringLength checks type, must be a string.
-							$codeCreateElements .= "\n\$$variableName" . "->addValidator('stringLength', false, array(0, $value));";
-						}
-					}
-				}
-			}
+            $codeCreateElements = "\$$variableName = new $element( '$inputName',\n\t$inputOptions\n);";
+            if (count($inputAttributes)) {
+                foreach ($inputAttributes as $key => $value) {
+                    $codeCreateElements .= "\n\$$variableName" . "->setAttrib('$key', '$value');\n";
+                    if ($key == 'maxlength') {
+                        if ($value > 1000000) {
+                            $value = 1000000;
+                        }
+                        if ($this->isColumnNumeric($column)) {
+                            // stringLength checks type, must be a string.
+                            $codeCreateElements .= "\n\$$variableName" . "->addValidator('stringLength', false, array(0, $value));";
+                        }
+                    }
+                }
+            }
 
-			$codeCreateElements .= "\n\$this->addElement(\$$variableName);\n\n";
-		}
+            $codeCreateElements .= "\n\$this->addElement(\$$variableName);\n\n";
+        }
 
-		$codeCreateElements .= "\$this->addElement( \n\t'submit',\n\t'Submit');\n";
+        $codeCreateElements .= "\$this->addElement( \n\t'submit',\n\t'Submit');\n";
 
-		// constructor
-		$const = array(
-			'name' => '__construct',
-			'body' => "parent::__construct();\n$codeCreateElements",
-			'docblock'   => new Zend_CodeGenerator_Php_Docblock(array(
+        // constructor
+        $const = array(
+            'name' => '__construct',
+            'body' => "parent::__construct();\n$codeCreateElements",
+            'docblock'   => new Zend_CodeGenerator_Php_Docblock(array(
                 'shortDescription' => 'The constructor',
-				)),
-		);
-		$baseMethods[] = $const;
+                )),
+        );
+        $baseMethods[] = $const;
 
-		$baseDocBlock = $baseClassName . "\n\n";
-		$baseDocBlock .= 'Generated class file for form '. $table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'] . "\n";
-		$baseDocBlock .= 'Any changes here will be overridden.';
+        $baseDocBlock = $baseClassName . "\n\n";
+        $baseDocBlock .= 'Generated class file for form '. $table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'] . "\n";
+        $baseDocBlock .= 'Any changes here will be overridden.';
 
-		$base = new Zend_CodeGenerator_Php_Class();
-		$base->setName($baseClassName);
-		$base->setDocblock($baseDocBlock);
-		$base->setAbstract(true);
-		$base->setProperties($baseProperties);
-		$base->setMethods($baseMethods);
-		$base->setExtendedClass($this->base_class['form']);
-		$baseCode = $base->generate();
+        $base = new Zend_CodeGenerator_Php_Class();
+        $base->setName($baseClassName);
+        $base->setDocblock($baseDocBlock);
+        $base->setAbstract(true);
+        $base->setProperties($baseProperties);
+        $base->setMethods($baseMethods);
+        $base->setExtendedClass($this->baseClass['form']);
+        $baseCode = $base->generate();
 
-		$this->writeFile($baseFile, $baseCode);
-		$this->output('done');
+        $this->writeFile($baseFile, $baseCode);
+        $this->output('done');
 
-		$classFile = $this->projectRoot . $this->paths['application'] . $this->paths['modules'] . $this->paths['forms'] . $table['namespace'] . '/' . $table['classNamePartial'] . '.php';
-		if(!file_exists($classFile)) {
-			$className = $this->convertFileNameToClassName($classFile, $this->paths['application'] . $this->paths['modules']);
-			$this->output($className . '... ', false);
+        $classFile = $this->projectRoot . $this->paths['application'] . $this->paths['modules'] . $this->paths['forms'] . $table['namespace'] . '/' . $table['classNamePartial'] . '.php';
+        if (!file_exists($classFile)) {
+            $className = $this->convertFileNameToClassName($classFile, $this->paths['application'] . $this->paths['modules']);
+            $this->output($className . '... ', false);
 
-			$docBlock = $className . "\n\n";
-			$docBlock .= 'Form for ' . $table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'] . "\n\n";
-			$docBlock .= 'This class is a descendant of '.$this->parent_class['form'].' and can be used to add customizations to ' . $baseClassName;
+            $docBlock = $className . "\n\n";
+            $docBlock .= 'Form for ' . $table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'] . "\n\n";
+            $docBlock .= 'This class is a descendant of '.$this->parentClass['form'].' and can be used to add customizations to ' . $baseClassName;
 
-			$class = new Zend_CodeGenerator_Php_Class();
-			$class->setName($className);
-			$class->setDocblock($docBlock);
-			$class->setExtendedClass($baseClassName);
-			$classCode = $class->generate();
+            $class = new Zend_CodeGenerator_Php_Class();
+            $class->setName($className);
+            $class->setDocblock($docBlock);
+            $class->setExtendedClass($baseClassName);
+            $classCode = $class->generate();
 
-			$this->writeFile($classFile, $classCode);
-			$this->output('done');
-		}
+            $this->writeFile($classFile, $classCode);
+            $this->output('done');
+        }
 
-		return true;
-	}
+        return true;
+    }
 
-	/**
-	 * Creates the application specific form class. Aborts early if class already exists
-	 *
-	 * @return void
-	 */
-	public function generateBaseForm() {
-		$generated_base_path = $this->paths['library'] . $this->paths['generated'] . $this->paths['base'];
-		$this->makeDirectory($generated_base_path);
+    /**
+     * Creates the application specific form class. Aborts early if class already exists
+     *
+     * @return void
+     */
+    public function generateBaseForm() {
+        $generatedBasePath = $this->paths['library'] . $this->paths['generated'] . $this->paths['base'];
+        $this->makeDirectory($generatedBasePath);
 
-		$baseFile = $this->projectRoot . $generated_base_path . 'Form.php';
-		$baseClassName = $this->convertFileNameToClassName($baseFile, $this->paths['library']);
-		$this->output($baseClassName . '... ', false);
+        $baseFile = $this->projectRoot . $generatedBasePath . 'Form.php';
+        $baseClassName = $this->convertFileNameToClassName($baseFile, $this->paths['library']);
+        $this->output($baseClassName . '... ', false);
 
-		$baseProperties = array();
-		$baseMethods = array();
+        $baseProperties = array();
+        $baseMethods = array();
 
-		$baseDocBlock = $baseClassName . "\n\n";
-		$baseDocBlock .= 'Generated base class file for forms' . "\n";
-		$baseDocBlock .= 'Any changes here will be overridden.';
+        $baseDocBlock = $baseClassName . "\n\n";
+        $baseDocBlock .= 'Generated base class file for forms' . "\n";
+        $baseDocBlock .= 'Any changes here will be overridden.';
 
-		$base = new Zend_CodeGenerator_Php_Class();
-		$base->setName($baseClassName);
-		$base->setDocblock($baseDocBlock);
-		$base->setAbstract(true);
-		$base->setProperties($baseProperties);
-		$base->setMethods($baseMethods);
-		$base->setExtendedClass($this->parent_class['form']);
-		$baseCode = $base->generate();
+        $base = new Zend_CodeGenerator_Php_Class();
+        $base->setName($baseClassName);
+        $base->setDocblock($baseDocBlock);
+        $base->setAbstract(true);
+        $base->setProperties($baseProperties);
+        $base->setMethods($baseMethods);
+        $base->setExtendedClass($this->parentClass['form']);
+        $baseCode = $base->generate();
 
-		$this->writeFile($baseFile, $baseCode);
-		$this->output('done');
+        $this->writeFile($baseFile, $baseCode);
+        $this->output('done');
 
-		$base_base_path = $this->paths['application'] . $this->paths['modules'] . $this->paths['base'];
-		$this->makeDirectory($base_base_path);
+        $baseBasePath = $this->paths['application'] . $this->paths['modules'] . $this->paths['base'];
+        $this->makeDirectory($baseBasePath);
 
-		$classFile = $this->projectRoot . $base_base_path . 'Form.php';
-		$className = $this->convertFileNameToClassName($classFile, $this->paths['application'] . $this->paths['modules']);
-		$this->base_class['form'] = $className;
-		if(!file_exists($classFile)) {
-			$this->output($className . '... ', false);
+        $classFile = $this->projectRoot . $baseBasePath . 'Form.php';
+        $className = $this->convertFileNameToClassName($classFile, $this->paths['application'] . $this->paths['modules']);
+        $this->baseClass['form'] = $className;
+        if (!file_exists($classFile)) {
+            $this->output($className . '... ', false);
 
-			$docBlock = $className . "\n\n";
-			$docBlock .= 'This class can be used to customize '.$this->parent_class['form'].' with application specific logic. ';
-			$docBlock .= 'All other form classes extend from this class.';
+            $docBlock = $className . "\n\n";
+            $docBlock .= 'This class can be used to customize '.$this->parentClass['form'].' with application specific logic. ';
+            $docBlock .= 'All other form classes extend from this class.';
 
-			$class = new Zend_CodeGenerator_Php_Class();
-			$class->setName($className);
-			$class->setDocblock($docBlock);
-			$class->setExtendedClass($baseClassName);
-			$classCode = $class->generate();
+            $class = new Zend_CodeGenerator_Php_Class();
+            $class->setName($className);
+            $class->setDocblock($docBlock);
+            $class->setExtendedClass($baseClassName);
+            $classCode = $class->generate();
 
-			$this->writeFile($classFile, $classCode);
-			$this->output('done');
-		}
+            $this->writeFile($classFile, $classCode);
+            $this->output('done');
+        }
 
-		return true;
-	}
+        return true;
+    }
 
 /*===============================
 ** Constants Generator
 **===============================*/
 
-	/**
-	 * Master function to create the constant classes based off of constants.cfg
-	 *
-	 * @return void
-	 */
-	public function generateConstants() {
-		$this->output('==Constants Generator Initiated==');
-		/* Make sure we have a constants.cfg file where expected */
-		if(!file_exists(APPLICATION_PATH . '/configs/constants.cfg')) { return false; }
-		include(APPLICATION_PATH . '/configs/constants.cfg');
+    /**
+     * Master function to create the constant classes based off of constants.cfg
+     *
+     * @return void
+     */
+    public function generateConstants() {
+        $this->output('==Constants Generator Initiated==');
+        /* Make sure we have a constants.cfg file where expected */
+        if (!file_exists(APPLICATION_PATH . '/configs/constants.cfg')) { return false; }
+        include(APPLICATION_PATH . '/configs/constants.cfg');
 
-		/* Make sure the included file created the constants variable and it's an array */
-		if(!isset($constants) || !is_array($constants)) { return false; }
+        /* Make sure the included file created the constants variable and it's an array */
+        if (!isset($constants) || !is_array($constants)) { return false; }
 
-		$this->createDefaultPaths(array(
-			'constants' => 'Constants/',
-		));
-		$constants_base_dir = $this->paths['library'] . $this->paths['generated'] . $this->paths['constants'];
-		$this->makeDirectory($constants_base_dir);
+        $this->createDefaultPaths(array(
+            'constants' => 'Constants/',
+        ));
+        $constantsBaseDir = $this->paths['library'] . $this->paths['generated'] . $this->paths['constants'];
+        $this->makeDirectory($constantsBaseDir);
 
-		/* Loop through all databases in the constants array */
-		foreach( $constants as $schema => $tables ) {
-			if(!is_array($tables)) { continue; }
+        /* Loop through all databases in the constants array */
+        foreach ($constants as $schema => $tables) {
+            if (!is_array($tables)) { continue; }
 
-			$ns = $this->makeNamespace($schema);
-			$this->makeDirectory($constants_base_dir . $ns);
+            $namespace = $this->makeNamespace($schema);
+            $this->makeDirectory($constantsBaseDir . $namespace);
 
-			foreach($tables as $table => $options) {
-				if(!is_array($options)) { continue; }
+            foreach ($tables as $table => $options) {
+                if (!is_array($options)) { continue; }
 
-				$table = array(
-					'TABLE_SCHEMA' => $schema,
-					'TABLE_NAME' => $table,
-					'namespace' => $ns,
-				);
+                $table = array(
+                    'TABLE_SCHEMA' => $schema,
+                    'TABLE_NAME' => $table,
+                    'namespace' => $namespace,
+                );
 
-				$result = $this->generateConstant($table, $options);
-				if(!$result) {
-					$this->output('Unable to generate constants for ' . $tableName);
-				}
-			}
-		}
-		$this->output('==Constants Generator Complete==');
-	}
+                $result = $this->generateConstant($table, $options);
+                if (!$result) {
+                    $this->output('Unable to generate constants for ' . $tableName);
+                }
+            }
+        }
+        $this->output('==Constants Generator Complete==');
+    }
 
-	/**
-	 * Delegate function that does the actual work of creating the constant classes
-	 *
-	 * @param array $table
-	 * @param array $options
-	 * @return boolean
-	 */
-	protected function generateConstant($table, $options) {
-		if(!array_key_exists('key', $options) || !array_key_exists('value', $options)) { return false; }
+    /**
+     * Delegate function that does the actual work of creating the constant classes
+     *
+     * @param array $table
+     * @param array $options
+     *
+     * @return boolean
+     */
+    protected function generateConstant($table, $options) {
+        if (!array_key_exists('key', $options) || !array_key_exists('value', $options)) { return false; }
 
-		$classNamePartial = $this->makeClassName($table['TABLE_NAME']);
-		$classFile = $this->projectRoot . $this->paths['library'] . $this->paths['generated'] . $this->paths['constants'] . $table['namespace'] . '/'. $classNamePartial . '.php';
-		$className = $this->convertFileNameToClassName($classFile, $this->paths['library']);
-		$this->output($className . '... ', false);
+        $classNamePartial = $this->makeClassName($table['TABLE_NAME']);
+        $classFile = $this->projectRoot . $this->paths['library'] . $this->paths['generated'] . $this->paths['constants'] . $table['namespace'] . '/'. $classNamePartial . '.php';
+        $className = $this->convertFileNameToClassName($classFile, $this->paths['library']);
+        $this->output($className . '... ', false);
 
-		$sql = 'SELECT `' . $options['key'] . '`, `' . $options['value'] . '`'
-			. 'FROM `' . $table['TABLE_SCHEMA'] . '`.`' . $table['TABLE_NAME'] . '`';
-		$rows = $this->db->fetchAll($sql);
+        $sql = 'SELECT `' . $options['key'] . '`, `' . $options['value'] . '`'
+            . 'FROM `' . $table['TABLE_SCHEMA'] . '`.`' . $table['TABLE_NAME'] . '`';
+        $rows = $this->db->fetchAll($sql);
 
-		$properties = array();
-		foreach($rows as $index => $row) {
-			$name = preg_replace('/[^A-z0-9 ]/i', '_', $row[$options['key']]);
-			if(array_key_exists('prefix', $options)) {
-				$name = preg_replace('/[^A-z0-9 ]/i', '_', $options['prefix']) . '_' . $name;
-			}
-			$name = strtoupper($name);
+        $properties = array();
+        foreach ($rows as $index => $row) {
+            $name = preg_replace('/[^A-z0-9 ]/i', '_', $row[$options['key']]);
+            if (array_key_exists('prefix', $options)) {
+                $name = preg_replace('/[^A-z0-9 ]/i', '_', $options['prefix']) . '_' . $name;
+            }
+            $name = strtoupper($name);
 
-			$properties[] = array(
-				'name' => $name,
-				'defaultValue' => $row[$options['value']],
-				'const' => true,
-			);
-		}
+            $properties[] = array(
+                'name' => $name,
+                'defaultValue' => $row[$options['value']],
+                'const' => true,
+            );
+        }
 
-		$methods = array();
+        $methods = array();
 
 
-		@$docBlock = "$className\n\nGenerated class constants file for table ". $table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'] . "\nAny changes here will be overridden.\n";
+        @$docBlock = "$className\n\nGenerated class constants file for table ". $table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'] . "\nAny changes here will be overridden.\n";
 
-		$class = new Zend_CodeGenerator_Php_Class();
-		$class->setName($className);
-		$class->setDocblock($docBlock);
-		$class->setProperties($properties);
-		$class->setMethods($methods);
-		$classCode = $class->generate();
+        $class = new Zend_CodeGenerator_Php_Class();
+        $class->setName($className);
+        $class->setDocblock($docBlock);
+        $class->setProperties($properties);
+        $class->setMethods($methods);
+        $classCode = $class->generate();
 
-		$this->writeFile($classFile, $classCode);
-		$this->output('done');
+        $this->writeFile($classFile, $classCode);
+        $this->output('done');
 
-		return true;
-	}
+        return true;
+    }
 
 /*===============================
 ** SQL Generator
 **===============================*/
 
-	/**
-	 * Master function to create the sql dump for every databases requested
-	 *
-	 * @return void
-	 */
-	protected function generateSQLDumps() {
-		$this->output('==SQL Dumps Generator Initiated==');
+    /**
+     * Master function to create the sql dump for every databases requested
+     *
+     * @return void
+     */
+    protected function generateSQLDumps() {
+        $this->output('==SQL Dumps Generator Initiated==');
 
-		$this->createDefaultPaths(array(
-			'mysql' => 'mysql/',
-			'mysql_dumps' => 'dumps/',
-		));
-		$mysql_base_path = $this->paths['mysql'];
+        $this->createDefaultPaths(array(
+            'mysql' => 'mysql/',
+            'mysql_dumps' => 'dumps/',
+        ));
+        $mysqlBasePath = $this->paths['mysql'];
 
-		$this->makeDirectory($mysql_base_path);
+        $this->makeDirectory($mysqlBasePath);
 
-		foreach($this->databases as $database) {
-			$ns = $this->makeNamespace($database);
-			$this->makeDirectory($mysql_base_path . $ns);
-			$this->makeDirectory($mysql_base_path . $ns . '/' . $this->paths['mysql_dumps']);
+        foreach ($this->databases as $database) {
+            $namespace = $this->makeNamespace($database);
+            $this->makeDirectory($mysqlBasePath . $namespace);
+            $this->makeDirectory($mysqlBasePath . $namespace . '/' . $this->paths['mysql_dumps']);
 
-			$results = $this->generateSQLDump($database, $ns);
-			if(!$results) {
-				$this->output('Mysql Dump could not be created for ' . $database);
-			}
-		}
-		$this->output('==SQL Dumps Generator Complete==');
-	}
+            $results = $this->generateSQLDump($database, $namespace);
+            if (!$results) {
+                $this->output('Mysql Dump could not be created for ' . $database);
+            }
+        }
+        $this->output('==SQL Dumps Generator Complete==');
+    }
 
-	/**
-	 * Delegate function that does the actual work of creating the sql dump for each database
-	 *
-	 * @param string $database
-	 * @param string $ns
-	 * @return boolean
-	 */
-	protected function generateSQLDump($database, $ns) {
-		$this->output($database . '... ', false);
-		$file_name = $this->projectRoot . $this->paths['mysql'] . $ns . '/' . $this->paths['mysql_dumps'] . '_current.sql';
+    /**
+     * Delegate function that does the actual work of creating the sql dump for each database
+     *
+     * @param string $database
+     * @param string $namespace
+     *
+     * @return boolean
+     */
+    protected function generateSQLDump($database, $namespace) {
+        $this->output($database . '... ', false);
+        $fileName = $this->projectRoot . $this->paths['mysql'] . $namespace . '/' . $this->paths['mysql_dumps'] . '_current.sql';
 
-		$dbParams = $this->config['resources']['db']['params'];
+        $databaseParams = $this->config['resources']['db']['params'];
 
-		$host = '-h ' . $dbParams['host'];
-		$username = '-u ' . $dbParams['username'];
-		$password = '-p' . $dbParams['password'];
+        $host = '-h ' . $databaseParams['host'];
+        $username = '-u ' . $databaseParams['username'];
+        $password = '-p' . $databaseParams['password'];
 
-		$result = shell_exec("/usr/local/mysql/bin/mysqldump $host $username $password --no-data $database");
-		$sql = preg_replace('/ AUTO_INCREMENT=\d+/', '', $result);
-		$this->writeFile($file_name, $sql, 'sql');
-		$this->output('done');
-		return true;
-	}
+        $result = shell_exec("/usr/local/mysql/bin/mysqldump $host $username $password --no-data $database");
+        $sql = preg_replace('/ AUTO_INCREMENT=\d+/', '', $result);
+        $this->writeFile($fileName, $sql, 'sql');
+        $this->output('done');
+        return true;
+    }
 
-	/**
-	 * Master function to create the sql for all tables in every databases requested
-	 *
-	 * @return void
-	 */
-	protected function generateTablesSQL() {
-		$this->output('==Table SQL Generator Initiated==');
+    /**
+     * Master function to create the sql for all tables in every databases requested
+     *
+     * @return void
+     */
+    protected function generateTablesSQL() {
+        $this->output('==Table SQL Generator Initiated==');
 
-		$this->createDefaultPaths(array(
-			'mysql' => 'mysql/',
-			'mysql_tables' => 'tables/',
-		));
-		$mysql_base_path = $this->paths['mysql'];
+        $this->createDefaultPaths(array(
+            'mysql' => 'mysql/',
+            'mysql_tables' => 'tables/',
+        ));
+        $mysqlBasePath = $this->paths['mysql'];
 
-		$this->makeDirectory($mysql_base_path);
+        $this->makeDirectory($mysqlBasePath);
 
-		foreach($this->databases as $database) {
-			$ns = $this->makeNamespace($database);
-			$this->makeDirectory($mysql_base_path . $ns);
-			$this->makeDirectory($mysql_base_path . $ns . '/' . $this->paths['mysql_tables']);
+        foreach ($this->databases as $database) {
+            $namespace = $this->makeNamespace($database);
+            $this->makeDirectory($mysqlBasePath . $namespace);
+            $this->makeDirectory($mysqlBasePath . $namespace . '/' . $this->paths['mysql_tables']);
 
-			$tables = $this->getTables($database);
-			foreach($tables as $table) {
-				$results = $this->generateTableSQL($table);
-				if(!$results) {
-					$this->output('Table sql could not be created for ' . $database . '.' . $table['TABLE_NAME']);
-				}
-			}
-		}
-		$this->output('==Table SQL Generator Complete==');
-	}
+            $tables = $this->getTables($database);
+            foreach ($tables as $table) {
+                $results = $this->generateTableSQL($table);
+                if (!$results) {
+                    $this->output('Table sql could not be created for ' . $database . '.' . $table['TABLE_NAME']);
+                }
+            }
+        }
+        $this->output('==Table SQL Generator Complete==');
+    }
 
-	/**
-	 * Delegate function that does the actual work of creating the sql for each table
-	 *
-	 * @param array $table
-	 * @return boolean
-	 */
-	protected function generateTableSQL($table) {
-		$this->output($table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'] . '... ', false);
-		$show_table = $this->db->query('SHOW CREATE TABLE ' . $table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'])->fetch();
-		$file_name = $this->projectRoot . $this->paths['mysql'] . $table['namespace'] . '/' . $this->paths['mysql_tables'] . $table['classNamePartial'] . '.sql';
-		$sql = preg_replace('/ AUTO_INCREMENT=\d+/', '', $show_table['Create Table']);
-		$this->writeFile($file_name, $sql, 'sql');
-		$this->output('done');
-		return true;
-	}
+    /**
+     * Delegate function that does the actual work of creating the sql for each table
+     *
+     * @param array $table
+     *
+     * @return boolean
+     */
+    protected function generateTableSQL($table) {
+        $this->output($table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'] . '... ', false);
+        $showTable = $this->db->query('SHOW CREATE TABLE ' . $table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'])->fetch();
+        $fileName = $this->projectRoot . $this->paths['mysql'] . $table['namespace'] . '/' . $this->paths['mysql_tables'] . $table['classNamePartial'] . '.sql';
+        $sql = preg_replace('/ AUTO_INCREMENT=\d+/', '', $showTable['Create Table']);
+        $this->writeFile($fileName, $sql, 'sql');
+        $this->output('done');
+        return true;
+    }
 
-	/**
-	 * Master function to create the sql for all triggers in every databases requested
-	 *
-	 * @return void
-	 */
-	protected function generateTriggersSQL() {
-		$this->output('==Trigger SQL Generator Initiated==');
+    /**
+     * Master function to create the sql for all triggers in every databases requested
+     *
+     * @return void
+     */
+    protected function generateTriggersSQL() {
+        $this->output('==Trigger SQL Generator Initiated==');
 
-		$this->createDefaultPaths(array(
-			'mysql' => 'mysql/',
-			'mysql_triggers' => 'triggers/',
-		));
-		$mysql_base_path = $this->paths['mysql'];
+        $this->createDefaultPaths(array(
+            'mysql' => 'mysql/',
+            'mysql_triggers' => 'triggers/',
+        ));
+        $mysqlBasePath = $this->paths['mysql'];
 
-		$this->makeDirectory($mysql_base_path);
+        $this->makeDirectory($mysqlBasePath);
 
-		foreach($this->databases as $database) {
-			$ns = $this->makeNamespace($database);
-			$this->makeDirectory($mysql_base_path . $ns);
-			$this->makeDirectory($mysql_base_path . $ns . '/' . $this->paths['mysql_triggers']);
+        foreach ($this->databases as $database) {
+            $namespace = $this->makeNamespace($database);
+            $this->makeDirectory($mysqlBasePath . $namespace);
+            $this->makeDirectory($mysqlBasePath . $namespace . '/' . $this->paths['mysql_triggers']);
 
-			$triggers = $this->getTriggers($database);
-			foreach($triggers as $trigger) {
-				$results = $this->generateTriggerSQL($trigger);
-				if(!$results) {
-					$this->output('Trigger sql could not be created for ' . $database . '.' . $trigger['Trigger']);
-				}
-			}
-		}
-		$this->output('==Trigger SQL Generator Complete==');
-	}
+            $triggers = $this->getTriggers($database);
+            foreach ($triggers as $trigger) {
+                $results = $this->generateTriggerSQL($trigger);
+                if (!$results) {
+                    $this->output('Trigger sql could not be created for ' . $database . '.' . $trigger['Trigger']);
+                }
+            }
+        }
+        $this->output('==Trigger SQL Generator Complete==');
+    }
 
-	/**
-	 * Delegate function that does the actual work of creating the sql for each trigger
-	 *
-	 * @param array $trigger
-	 * @return boolean
-	 */
-	protected function generateTriggerSQL($trigger) {
-		$this->output($trigger['TRIGGER_SCHEMA'] . '.' . $trigger['TRIGGER_NAME'] . '... ', false);
-		$file_name = $this->projectRoot . $this->paths['mysql'] . $trigger['namespace'] . '/' . $this->paths['mysql_triggers'] . $trigger['classNamePartial'] . '.sql';
+    /**
+     * Delegate function that does the actual work of creating the sql for each trigger
+     *
+     * @param array $trigger
+     *
+     * @return boolean
+     */
+    protected function generateTriggerSQL($trigger) {
+        $this->output($trigger['TRIGGER_SCHEMA'] . '.' . $trigger['TRIGGER_NAME'] . '... ', false);
+        $fileName = $this->projectRoot . $this->paths['mysql'] . $trigger['namespace'] . '/' . $this->paths['mysql_triggers'] . $trigger['classNamePartial'] . '.sql';
 
-		$sql = 'DELIMITER ;;' . "\n";
-		$sql .= 'DROP TRIGGER IF EXISTS ' . $trigger['TRIGGER_NAME'] . ";\n";
-		$sql .= 'CREATE TRIGGER ' . $trigger['TRIGGER_NAME'] . "\n";
-		$sql .= $trigger['ACTION_TIMING'] . ' ' . $trigger['EVENT_MANIPULATION'] . ' ON ' . $trigger['EVENT_OBJECT_TABLE'] . "\n";
-		$sql .= 'FOR EACH ROW' . "\n";
-		$sql .= $trigger['ACTION_STATEMENT'] . ";;\n\n";
-		$sql .= 'DELIMITER ;';
+        $sql = 'DELIMITER ;;' . "\n";
+        $sql .= 'DROP TRIGGER IF EXISTS ' . $trigger['TRIGGER_NAME'] . ";\n";
+        $sql .= 'CREATE TRIGGER ' . $trigger['TRIGGER_NAME'] . "\n";
+        $sql .= $trigger['ACTION_TIMING'] . ' ' . $trigger['EVENT_MANIPULATION'] . ' ON ' . $trigger['EVENT_OBJECT_TABLE'] . "\n";
+        $sql .= 'FOR EACH ROW' . "\n";
+        $sql .= $trigger['ACTION_STATEMENT'] . ";;\n\n";
+        $sql .= 'DELIMITER ;';
 
-		$this->writeFile($file_name, $sql, 'sql');
-		$this->output('done');
-		return true;
-	}
+        $this->writeFile($fileName, $sql, 'sql');
+        $this->output('done');
+        return true;
+    }
 }
