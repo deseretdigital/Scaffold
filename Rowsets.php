@@ -370,6 +370,14 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
 
         $createRowset = array(
             'name' => 'createRowset',
+            'visibility' => 'public',
+            'parameters' => array(
+                array(
+                    'name' => 'data',
+                    'type' => 'array',
+                    'defaultValue' => null,
+                ),
+            ),
             'body' => '
 $config = array(
     \'table\' => $this,
@@ -379,10 +387,13 @@ $config = array(
 );
 $rowsetClass = $this->getRowsetClass();
 $rowset = new $rowsetClass($config);
+if ($data !== null) {
+    $rowset->setFromArray($data);
+}
 return $rowset;
             ',
             'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-                'shortDescription' => 'Returns a new blank rowset (not from the database)',
+                'shortDescription' => 'Returns a new rowset (not from the database) optionally populated with the passed in $data',
                 'tags' => array(
                     new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
                         'name' => '$rowset',
@@ -648,12 +659,9 @@ return $groups;',
                 ),
             ),
             'body' => '
-$getter = \'get_\' . $columnName;
-$filter = new Zend_Filter_Word_UnderscoreToCamelCase();
-$getter = $filter->filter($getter);
 $rowset = $this->getTable()->createRowset();
 foreach ($this as $row) {
-    if ($row->$getter() == $value) {
+    if ($row->__get($columnName) == $value) {
         $rowset->addRow($row);
     }
 }
@@ -676,6 +684,54 @@ return $rowset;',
             )),
         );
         $baseMethods[] = $filterBy;
+
+        $getRowByPrimaryKeys = array(
+            'name' => 'getRowByPrimaryKeys',
+            'visibility' => 'public',
+            'parameters' => array(
+                array(
+                    'name' => 'data',
+                    'type' => 'array',
+                ),
+            ),
+            'body' => '
+$primaryKeys = $this->getTable()->getPrimaryKeys();
+$lookupKeys = array();
+foreach ($primaryKeys as $primaryKey) {
+    if (array_key_exists($primaryKey, $data)) {
+        $lookupKeys[$primaryKey] = $data[$primaryKey];
+    }
+}
+
+if (count($lookupKeys) != count($primaryKeys)) {
+    throw new Zend_Db_Table_Rowset_Exception(\'Expecting \'.count($primaryKeys).\' primary keys. Only \'.count($lookupKeys).\' passed to getRowByPrimaryKeys.\');
+}
+
+$rowset = $this;
+foreach ($lookupKeys as $lookupKey => $lookupKeyValue) {
+    $rowset = $rowset->filterBy($lookupKey, $lookupKeyValue);
+}
+
+if (!count($rowset) > 0) {
+    throw new Zend_Db_Table_Rowset_Exception(\'Requested row not found in rowset.\');
+}
+
+return $rowset->current();
+            ',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Returns a row matching the set an array of primary keys',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'keys',
+                        'datatype' => 'array',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'datatype' => 'Zend_Db_Table_Row_Abstract',
+                    )),
+                )
+            )),
+        );
+        $baseMethods[] = $getRowByPrimaryKeys;
 
         $addRow = array(
             'name' => 'addRow',
@@ -709,6 +765,7 @@ $this->_count = count($this->_data);
 
         $createRow = array(
             'name' => 'createRow',
+            'visibility' => 'public',
             'body' => '
 return $this->getTable()->createRow();
             ',
@@ -723,6 +780,127 @@ return $this->getTable()->createRow();
             )),
         );
         $baseMethods[] = $createRow;
+
+        $save = array(
+            'name' => 'save',
+            'visibility' => 'public',
+            'body' => '
+foreach ($this as $row) {
+    $row->save();
+}
+            ',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Saves all the rows in the rowset',
+            )),
+        );
+        $baseMethods[] = $save;
+
+        $delete = array(
+            'name' => 'delete',
+            'visibility' => 'public',
+            'body' => '
+foreach ($this as $row) {
+    $row->delete();
+}
+            ',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Deletes all the rows in the rowset',
+            )),
+        );
+        $baseMethods[] = $delete;
+
+        $setFromArray = array(
+            'name' => 'setFromArray',
+            'visibility' => 'public',
+            'parameters' => array(
+                array(
+                    'name' => 'data',
+                    'type' => 'array',
+                ),
+            ),
+            'body' => '
+$primaryKeys = $this->getTable()->getPrimaryKeys();
+
+foreach ($data as $datum) {
+    $keys = array();
+    foreach ($primaryKeys as $primaryKey) {
+        if (array_key_exists($primaryKey, $datum)) {
+            $keys[$primaryKey] = $datum[$primaryKey];
+        }
+    }
+
+    try {
+        $row = $this->getRowByPrimaryKeys($keys);
+    } catch (Zend_Db_Table_Rowset_Exception $e) {
+        $row = $this->createRow();
+        $this->addRow($row);
+    }
+
+    $row->setFromArray($datum);
+}
+            ',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Sets data from an array with all child elements',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'data',
+                        'datatype' => 'array',
+                    )),
+                )
+            )),
+        );
+        $baseMethods[] = $setFromArray;
+
+        $__call = array(
+            'name' => '__call',
+            'visibility' => 'public',
+            'parameters' => array(
+                array(
+                    'name' => 'method',
+                ),
+                array(
+                    'name' => 'args',
+                    'type' => 'array',
+                ),
+            ),
+            'body' => '
+if (strpos($method, \'get\') === 0) {
+    $data = array();
+    foreach($this as $row) {
+        $data[] = $row->$method();
+    }
+    return $data;
+} else if (strpos($method, \'set\') === 0) {
+    foreach($this as $row) {
+        $row->$method($args[0]);
+    }
+    return;
+}
+
+throw new Zend_Db_Table_Rowset_Exception(\'Unrecognized method "\'.$method.\'()"\');
+            ',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Forwards get and set methods not recognized to the individual row objects',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'method',
+                        'datatype' => 'string',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'args',
+                        'datatype' => 'array',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'datatype' => 'array',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag(array(
+                        'name' => 'throws',
+                        'description' => 'Zend_Db_Table_Rowset_Exception If an invalid method is called.',
+                    )),
+                )
+            )),
+        );
+        $baseMethods[] = $__call;
 
         // toArray needs to be overwritten for two reasons:
         // 1) To ensure we to a row->toArray resulting in getColumnName functions being called()
@@ -1332,6 +1510,43 @@ $this->init();
         );
         $baseMethods[] = $__construct;
 
+        $setFromArray = array(
+            'name' => 'setFromArray',
+            'visibility' => 'public',
+            'parameters' => array(
+                array(
+                    'name' => 'data',
+                    'type' => 'array',
+                ),
+            ),
+            'body' => '
+parent::setFromArray($data);
+$data = array_diff_key($data, $this->_data);
+
+foreach ($data as $name => $value) {
+    $function = $this->getFunctionName(\'set_\' . $name);
+    if (method_exists($this, $function)) {
+        $this->$function($value);
+    }
+}
+
+return $this;
+            ',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Calls the parent method and then sets any addition data parameters the row can accept',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'data',
+                        'datatype' => 'array',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'datatype' => 'Zend_Db_Table_Row_Abstract',
+                    )),
+                )
+            )),
+        );
+        $baseMethods[] = $setFromArray;
+
         // __call needs to be updated so that requests for getColumnName or setColumnName are properly routed
         $__call = array(
             'name' => '__call',
@@ -1427,7 +1642,7 @@ $functionName = $this->getFunctionName(\'set_\' . $columnName);
 return $this->$functionName($value);
             ',
             'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-                'shortDescription' => 'Redirects __set to a getColumnName method',
+                'shortDescription' => 'Redirects __set to a setColumnName method',
                 'tags' => array(
                     new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
                         'paramName' => 'columnName',
@@ -1536,8 +1751,7 @@ return $this->$functionName($value);
 $data = array();
 
 foreach ($this->_data as $columnName => $value) {
-    $functionName = $this->getFunctionName(\'get_\' . $columnName);
-    $data[$columnName] = $this->$functionName();
+    $data[$columnName] = $this->__get($columnName);
 }
 
 return $data;
@@ -1552,41 +1766,6 @@ return $data;
             )),
         );
         $baseMethods[] = $toArray;
-
-        // setFromArray changes to use the custom setters instead of editing the data directly
-        $setFromArray = array(
-            'name' => 'setFromArray',
-            'parameters' => array(
-                array(
-                    'name' => 'data',
-                    'type' => 'array',
-                ),
-            ),
-            'body' => '
-$data = array_intersect_key($data, $this->_data);
-
-foreach ($data as $columnName => $value) {
-    $functionName = $this->getFunctionName(\'set_\' . $columnName);
-    $this->$functionName($value);
-}
-
-return $this;
-            ',
-            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
-                'shortDescription' => 'Sets all data in the row from an array. Overwrites base so that we call setColumnName instead of __set',
-                'tags' => array(
-                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
-                        'paramName' => 'data',
-                        'datatype'  => 'array'
-                    )),
-                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
-                        'datatype'  => 'Zend_Db_Table_Row_Abstract',
-                        'description' => 'Provides a fluent interface',
-                    )),
-                ),
-            )),
-        );
-        $baseMethods[] = $setFromArray;
 
         $getFunctionName = array(
             'name' => 'getFunctionName',
@@ -2077,6 +2256,7 @@ return strtolower($this->_columnNameFilter->filter($columnName));
         $username = '-u ' . $databaseParams['username'];
         $password = '-p' . $databaseParams['password'];
 
+        // @TODO remove hard coded path
         $result = shell_exec("/usr/local/mysql/bin/mysqldump $host $username $password --no-data $database");
         $sql = preg_replace('/ AUTO_INCREMENT=\d+/', '', $result);
         $this->writeFile($fileName, $sql, 'sql');
