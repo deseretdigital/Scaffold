@@ -785,12 +785,20 @@ return $this->getTable()->createRow();
             'name' => 'save',
             'visibility' => 'public',
             'body' => '
+$results = array();
 foreach ($this as $row) {
-    $row->save();
+    $results[] = $row->save();
 }
+return $results;
             ',
             'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
                 'shortDescription' => 'Saves all the rows in the rowset',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'name' => '$result',
+                        'datatype' => 'array',
+                    )),
+                )
             )),
         );
         $baseMethods[] = $save;
@@ -800,11 +808,24 @@ foreach ($this as $row) {
             'visibility' => 'public',
             'body' => '
 foreach ($this as $row) {
-    $row->delete();
+    $success = $row->delete();
+    if(!$success) {
+        throw new Zend_Db_Table_Rowset_Exception(\'Row with the primary keys \'.implode(\',\', $row->getPrimaryKeys()).\' could not be deleted!\');
+    }
 }
+return true;
             ',
             'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
                 'shortDescription' => 'Deletes all the rows in the rowset',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'datatype' => 'boolean',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag(array(
+                        'name' => 'throws',
+                        'description' => 'Zend_Db_Table_Rowset_Exception',
+                    )),
+                )
             )),
         );
         $baseMethods[] = $delete;
