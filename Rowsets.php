@@ -813,6 +813,7 @@ foreach ($this as $row) {
         throw new Zend_Db_Table_Rowset_Exception(\'Row with the primary keys \'.implode(\',\', $row->getPrimaryKeys()).\' could not be deleted!\');
     }
 }
+$this->reset();
 return true;
             ',
             'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
@@ -845,7 +846,7 @@ $primaryKeys = $this->getTable()->getPrimaryKeys();
 foreach ($data as $datum) {
     $keys = array();
     foreach ($primaryKeys as $primaryKey) {
-        if (array_key_exists($primaryKey, $datum)) {
+        if (array_key_exists($primaryKey, $datum) && $datum[$primaryKey] !== null) {
             $keys[$primaryKey] = $datum[$primaryKey];
         }
     }
@@ -936,6 +937,9 @@ foreach ($this as $row) {
     if ($usePrimaryKey) {
         $keys = $row->getPrimaryKeys();
         $key = array_shift($keys);
+        if ($key === null) {
+            $key = uniqid(\'NULL_\');
+        }
         $data[$key] = $row->toArray();
     } else {
         $data[] = $row->toArray();
@@ -953,6 +957,21 @@ return $data;
             )),
         );
         $baseMethods[] = $toArray;
+
+        $reset = array(
+            'name' => 'reset',
+            'visibility' => 'protected',
+            'body' => '
+$this->_data = array();
+$this->_rows = array();
+$this->_count = 0;
+$this->_pointer = 0;
+            ',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Resets a rowset to remove all data and rows',
+            )),
+        );
+        $baseMethods[] = $reset;
 
         $baseDocBlock = $baseClassName . "\n\n";
         $baseDocBlock .= 'Generated base class file for rowsets' . "\n";
