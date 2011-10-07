@@ -1826,6 +1826,62 @@ return strtolower($this->_columnNameFilter->filter($columnName));
             ))
         );
         $baseMethods[] = $getColumnName;
+        
+        $findDependentRowset = array(
+            'name' => 'findDependentRowset',
+            'visibility' => 'public',
+            'parameters' => array(
+                array(
+                    'name' => 'dependentTable',
+                ),
+                array(
+                    'name' => 'ruleKey',
+                    'defaultValue' => null,
+                ),
+                array(
+                    'name' => 'select',
+                    'type' => 'Zend_Db_Table_Select',
+                    'defaultValue' => null,
+                ),
+            ),
+            'body' => '
+if (in_array(null, $this->getPrimaryKeys(), true)) {
+    if (is_string($dependentTable)) {
+        $dependentTable = $this->_getTableFromString($dependentTable);
+    }
+
+    // getReference will throw a Zend_Db_Table_Exception if the table reference is invalid.
+    $dependentTable->getReference($this->getTableClass(), $ruleKey);
+
+    return $dependentTable->createRowset();
+}
+return parent::findDependentRowset($dependentTable, $ruleKey, $select);
+            ',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Calls the parent method unless a primary key is null, in which case an empty rowset is returned (instead of an exception)',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'dependentTable',
+                        'datatype' => 'string|Zend_Db_Table_Abstract',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'ruleKey',
+                        'datatype' => 'string',
+                        'description' => 'OPTIONAL',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'select',
+                        'datatype' => 'Zend_Db_Table_Select',
+                        'description' => 'OPTIONAL',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'datatype' => 'Zend_Db_Table_Rowset_Abstract',
+                        'description' => 'Query result from $dependentTable',
+                    )),
+                )
+            )),
+        );
+        $baseMethods[] = $findDependentRowset;
 
         $baseDocBlock = $baseClassName . "\n\n";
         $baseDocBlock .= 'Generated base class file for rows' . "\n";
