@@ -348,6 +348,8 @@ abstract class DDM_Scaffold_Abstract {
                 $table['AUTO_INCREMENT'] = $hasAutoIncrement;
 
                 $table['KEYS'] = $this->getKeys($database, $table['TABLE_NAME']);
+                $table['INDEXES'] = $this->getIndexes($database, $table['TABLE_NAME']);
+
                 $table['DEPENDENT_KEYS'] = array();
 
                 // this generates a lot of stuff that we already have but in a format that Zend_Db_Table wants
@@ -481,6 +483,26 @@ abstract class DDM_Scaffold_Abstract {
 
         $keys = $this->db->fetchAll($sql);
         return $keys;
+    }
+
+    /**
+     * Get the indexes for a table
+     *
+     * @param string $database
+     * @param string $table
+     *
+     * @return array
+     */
+    protected function getIndexes($database, $table) {
+        $sql = "SELECT *
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = '$database'
+            AND TABLE_NAME = '$table'
+            AND COLUMN_KEY != ''
+            ORDER BY COLUMN_NAME, ORDINAL_POSITION";
+
+        $indexes = $this->db->fetchAll($sql);
+        return $indexes;
     }
 
     /**
