@@ -269,7 +269,7 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
                     ),
                 ),
                 'body' => '
-                    return $this->findByColumnValue($columnName, $value, $select);
+                    return $this->findByColumnValue(\''.$indexes['COLUMN_NAME'].'\', $value, $select);
                 ',
                 'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
                     'shortDescription' => 'Gets a Rowset from ' . $indexes['TABLE_NAME'] . ' by ' . $indexes['COLUMN_NAME'],
