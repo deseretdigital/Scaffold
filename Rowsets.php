@@ -261,7 +261,6 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
                 'name' => $functionName,
                 'visibility' => 'public',
                 'parameters' => array(
-                    array( 'name' => 'columnName' ),
                     array( 'name' => 'value' ),
                     array(
                         'name' => 'select',
