@@ -2352,7 +2352,6 @@ return parent::findDependentRowset($dependentTable, $ruleKey, $select);
         $username = '-u ' . $databaseParams['username'];
         $password = '-p' . $databaseParams['password'];
 
-        // @TODONE remove hard coded path
         $result = shell_exec("mysqldump $host $username $password --no-data $database");
         $sql = preg_replace('/ AUTO_INCREMENT=\d+/', '', $result);
         $this->writeFile($fileName, $sql, 'sql');
