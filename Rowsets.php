@@ -1866,7 +1866,7 @@ return strtolower($this->_columnNameFilter->filter($columnName));
             ))
         );
         $baseMethods[] = $getColumnName;
-        
+
         $findDependentRowset = array(
             'name' => 'findDependentRowset',
             'visibility' => 'public',
@@ -2352,8 +2352,8 @@ return parent::findDependentRowset($dependentTable, $ruleKey, $select);
         $username = '-u ' . $databaseParams['username'];
         $password = '-p' . $databaseParams['password'];
 
-        // @TODO remove hard coded path
-        $result = shell_exec("/usr/local/mysql/bin/mysqldump $host $username $password --no-data $database");
+        // @TODONE remove hard coded path
+        $result = shell_exec("mysqldump $host $username $password --no-data $database");
         $sql = preg_replace('/ AUTO_INCREMENT=\d+/', '', $result);
         $this->writeFile($fileName, $sql, 'sql');
         $this->output('done');
