@@ -472,6 +472,7 @@ if ($select === null) {
 }
 $select->from($this);
 
+$columnName = $this->getAdapter()->quoteIdentifier($columnName);
 if (!is_array($value)) {
     $select->where($columnName . \' = ?\', $value);
 } else {
