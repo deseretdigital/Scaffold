@@ -471,7 +471,7 @@ return $rowset;
                 ),
             ),
             'body' => '
-if($select === null) {
+if ($select === null) {
     $select = $this->select();
 }
 $select->from($this);
