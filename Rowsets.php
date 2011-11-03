@@ -246,12 +246,11 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
 
         $baseMethods = array();
 
-        
+
         // Add convenience methods for getting rows by Indexed fields;
         // For example, User::getByUserID
         // This allows us to cache the results in the row objects
         foreach ($table['INDEXES'] as $indexes) {
-
             $variableName = $this->makeClassName($indexes['COLUMN_NAME']);
             $functionName = 'findBy' . ucfirst($variableName);
 
@@ -261,7 +260,9 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
                 'name' => $functionName,
                 'visibility' => 'public',
                 'parameters' => array(
-                    array( 'name' => 'value' ),
+                    array(
+                        'name' => 'value'
+                    ),
                     array(
                         'name' => 'select',
                         'defaultValue' => null,
@@ -269,16 +270,27 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
                     ),
                 ),
                 'body' => '
-                    return $this->findByColumnValue(\''.$indexes['COLUMN_NAME'].'\', $value, $select);
+return $this->findByColumnValue(\''.$indexes['COLUMN_NAME'].'\', $value, $select);
                 ',
                 'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
                     'shortDescription' => 'Gets a Rowset from ' . $indexes['TABLE_NAME'] . ' by ' . $indexes['COLUMN_NAME'],
                     'tags' => array(
-                        new Zend_CodeGenerator_Php_Docblock_Tag_Param(array( 'paramName' => 'columnName', 'datatype' => 'string' )),
-                        new Zend_CodeGenerator_Php_Docblock_Tag_Param(array( 'paramName' => 'value', 'datatype' => 'string|number|null' )),
-                        new Zend_CodeGenerator_Php_Docblock_Tag_Param(array( 'paramName' => 'select', 'datatype' => 'Zend_Db_Select|Zend_Db_Table_Select|null', 'description' => 'OPTIONAL' )),
-
-                        new Zend_CodeGenerator_Php_Docblock_Tag_Return(array('datatype'  => str_replace('Tables_', 'Rowsets_', $tableClassName) )),
+                        new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                            'paramName' => 'columnName',
+                            'datatype' => 'string'
+                        )),
+                        new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                            'paramName' => 'value',
+                            'datatype' => 'string|number|null'
+                        )),
+                        new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                            'paramName' => 'select',
+                            'datatype' => 'Zend_Db_Select|Zend_Db_Table_Select|null',
+                            'description' => 'OPTIONAL'
+                        )),
+                        new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                            'datatype' => str_replace('Tables_', 'Rowsets_', $tableClassName),
+                        )),
                     ),
                 )),
             );
@@ -446,8 +458,12 @@ return $rowset;
             'name' => 'findByColumnValue',
             'visibility' => 'public',
             'parameters' => array(
-                array( 'name' => 'columnName' ),
-                array( 'name' => 'value' ),
+                array(
+                    'name' => 'columnName'
+                ),
+                array(
+                    'name' => 'value'
+                ),
                 array(
                     'name' => 'select',
                     'defaultValue' => null,
@@ -455,16 +471,17 @@ return $rowset;
                 ),
             ),
             'body' => '
-$select = ( $select != null ? $select : $this->select() );
+if($select === null) {
+    $select = $this->select();
+}
 $select->from($this);
 
 if (!is_array($value)) {
     $select->where($columnName . \' = ?\', $value);
 } else {
-    
     $expressions = array();
     $inValues = array();
-    
+
     foreach ($value as $val) {
         if ($val === null) {
             $expressions[\'null\'] = $columnName . \' IS NULL\';
@@ -472,11 +489,11 @@ if (!is_array($value)) {
             $inValues[] = $this->getAdapter()->quoteInto(\'?\', $val);
         }
     }
-    
+
     if (!empty($inValues)) {
         $expressions[\'in\'] = $columnName . \' IN (\'.implode(\',\', $inValues).\')\';
     }
-    
+
     $select->where(implode(\' OR \', $expressions));
 }
 
@@ -485,11 +502,21 @@ return $this->fetchAll($select);
             'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
                 'shortDescription' => 'Retrieve Rowset from table where $columnName matches $value',
                 'tags' => array(
-                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array( 'paramName' => 'columnName', 'datatype' => 'string' )),
-                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array( 'paramName' => 'value', 'datatype' => 'string|number|null' )),
-                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array( 'paramName' => 'select', 'datatype' => 'Zend_Db_Select|Zend_Db_Table_Select|null OPTIONAL' )),
-
-                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array('datatype'  => 'Zend_Db_Table_Rowset_Abstract' )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'columnName',
+                        'datatype' => 'string'
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'value',
+                        'datatype' => 'string|number|null'
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'select',
+                        'datatype' => 'Zend_Db_Select|Zend_Db_Table_Select|null OPTIONAL'
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'datatype'  => 'Zend_Db_Table_Rowset_Abstract'
+                    )),
                 ),
             )),
         );
