@@ -246,6 +246,44 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
 
         $baseMethods = array();
 
+        
+        // Add convenience methods for getting rows by Indexed fields;
+        // For example, User::getByUserID
+        // This allows us to cache the results in the row objects
+        foreach ($table['INDEXES'] as $indexes) {
+
+            $variableName = $this->makeClassName($indexes['COLUMN_NAME']);
+            $functionName = 'findBy' . ucfirst($variableName);
+
+            $tableClassName = $this->getTableClassFromSchemaAndName($indexes['TABLE_SCHEMA'], $indexes['TABLE_NAME']);
+
+            $baseMethods[] = array(
+                'name' => $functionName,
+                'visibility' => 'public',
+                'parameters' => array(
+                    array( 'name' => 'value' ),
+                    array(
+                        'name' => 'select',
+                        'defaultValue' => null,
+                        'type' => 'Zend_Db_Select',
+                    ),
+                ),
+                'body' => '
+                    return $this->findByColumnValue(\''.$indexes['COLUMN_NAME'].'\', $value, $select);
+                ',
+                'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                    'shortDescription' => 'Gets a Rowset from ' . $indexes['TABLE_NAME'] . ' by ' . $indexes['COLUMN_NAME'],
+                    'tags' => array(
+                        new Zend_CodeGenerator_Php_Docblock_Tag_Param(array( 'paramName' => 'columnName', 'datatype' => 'string' )),
+                        new Zend_CodeGenerator_Php_Docblock_Tag_Param(array( 'paramName' => 'value', 'datatype' => 'string|number|null' )),
+                        new Zend_CodeGenerator_Php_Docblock_Tag_Param(array( 'paramName' => 'select', 'datatype' => 'Zend_Db_Select|Zend_Db_Table_Select|null', 'description' => 'OPTIONAL' )),
+
+                        new Zend_CodeGenerator_Php_Docblock_Tag_Return(array('datatype'  => str_replace('Tables_', 'Rowsets_', $tableClassName) )),
+                    ),
+                )),
+            );
+        }
+
         $baseDocBlock = $baseClassName . "\n\n";
         $baseDocBlock .= 'Generated class file for table '. $table['TABLE_SCHEMA'] . '.' . $table['TABLE_NAME'] . "\n";
         $baseDocBlock .= 'Any changes here will be overridden.';
@@ -403,6 +441,59 @@ return $rowset;
             )),
         );
         $baseMethods[] = $createRowset;
+
+        $findByColumnValue = array(
+            'name' => 'findByColumnValue',
+            'visibility' => 'public',
+            'parameters' => array(
+                array( 'name' => 'columnName' ),
+                array( 'name' => 'value' ),
+                array(
+                    'name' => 'select',
+                    'defaultValue' => null,
+                    'type' => 'Zend_Db_Select',
+                ),
+            ),
+            'body' => '
+$select = ( $select != null ? $select : $this->select() );
+$select->from($this);
+
+if (!is_array($value)) {
+    $select->where($columnName . \' = ?\', $value);
+} else {
+    
+    $expressions = array();
+    $inValues = array();
+    
+    foreach ($value as $val) {
+        if ($val === null) {
+            $expressions[\'null\'] = $columnName . \' IS NULL\';
+        } else {
+            $inValues[] = $this->getAdapter()->quoteInto(\'?\', $val);
+        }
+    }
+    
+    if (!empty($inValues)) {
+        $expressions[\'in\'] = $columnName . \' IN (\'.implode(\',\', $inValues).\')\';
+    }
+    
+    $select->where(implode(\' OR \', $expressions));
+}
+
+return $this->fetchAll($select);
+            ',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Retrieve Rowset from table where $columnName matches $value',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array( 'paramName' => 'columnName', 'datatype' => 'string' )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array( 'paramName' => 'value', 'datatype' => 'string|number|null' )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array( 'paramName' => 'select', 'datatype' => 'Zend_Db_Select|Zend_Db_Table_Select|null OPTIONAL' )),
+
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array('datatype'  => 'Zend_Db_Table_Rowset_Abstract' )),
+                ),
+            )),
+        );
+        $baseMethods[] = $findByColumnValue;
 
         $baseDocBlock = $baseClassName . "\n\n";
         $baseDocBlock .= 'Generated base class file for tables' . "\n";
@@ -1273,7 +1364,7 @@ if ($value !== null) {
             );
         }
 
-        // Add convenience methods for getting relateds rows by foreign key constraints.
+        // Add convenience methods for getting related rows by foreign key constraints.
         // This allows us to cache the results in the row objects
         // @TODO: str_replace('Tables_', 'Rows_', $tableClassName) needs to be done right so if the classes have other names it still works. Applies to all key related functions
         foreach ($table['KEYS'] as $key) {
@@ -1319,7 +1410,7 @@ return $this->'.$variableName.'[$keyName];',
             );
         }
 
-        // Add convenience methods for getting relateds rowsets by foreign key constraints.
+        // Add convenience methods for getting related rowsets by foreign key constraints.
         // This allows us to cache the results in the rowset objects
         foreach ($table['DEPENDENT_KEYS'] as $key) {
             $variableName = $key['TABLE_NAME'] . '_rowset_by_' . $key['COLUMN_NAME'];
