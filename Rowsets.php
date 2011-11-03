@@ -276,10 +276,6 @@ return $this->findByColumnValue(\''.$indexes['COLUMN_NAME'].'\', $value, $select
                     'shortDescription' => 'Gets a Rowset from ' . $indexes['TABLE_NAME'] . ' by ' . $indexes['COLUMN_NAME'],
                     'tags' => array(
                         new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
-                            'paramName' => 'columnName',
-                            'datatype' => 'string'
-                        )),
-                        new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
                             'paramName' => 'value',
                             'datatype' => 'string|number|null'
                         )),
