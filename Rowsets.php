@@ -1305,7 +1305,7 @@ if ($value == \'CURRENT_TIMESTAMP\') {
                 }
                 $getBody .= '$value = (boolean) $value;'."\n";
                 if ($column['IS_NULLABLE'] == 'YES') {
-                    $getBody .= 'if ($value !== null) {'."\n";
+                    $getBody .= '}'."\n";
                 }
 
                 // If we cast to a boolean and then an int, PHP leans toward true too often.
