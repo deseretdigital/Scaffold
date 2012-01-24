@@ -671,9 +671,17 @@ abstract class DDM_Scaffold_Abstract {
             $element = 'Zend_Form_Element_Hidden';
         } else if ($this->columnHasComment('BOOLEAN', $column)) {
             $element = 'Zend_Form_Element_Checkbox';
-        } else if (in_array($column['DATA_TYPE'], array('text', 'tinytext', 'mediumtext', 'longtext'))) {
+        } else if ($column['COLUMN_NAME'] == 'password') {
+            $element = 'Zend_Form_Element_Password';
+        } else if (in_array($column['DATA_TYPE'], array(
+            'text',
+            'tinytext',
+            'mediumtext',
+            'longtext',
+            'blob',
+        ))) {
             $element = 'Zend_Form_Element_Textarea';
-        } else if ($column['DATA_TYPE'] == 'varchar' && $column['CHARACTER_MAXIMUM_LENGTH'] <= 50) {
+        } else if ($column['DATA_TYPE'] == 'varchar' && $column['CHARACTER_MAXIMUM_LENGTH'] >= 50) {
             $element = 'Zend_Form_Element_Textarea';
         } else if ($column['DATA_TYPE'] == 'enum') {
             $element = 'Zend_Form_Element_Select';
@@ -700,6 +708,10 @@ abstract class DDM_Scaffold_Abstract {
     protected function getColumnValidators($column) {
         $validators = array();
 
+        if ($column['COLUMN_NAME'] == 'email') {
+            $validators[] = 'EmailAddress';
+        }
+
         return $validators;
     }
 
@@ -713,6 +725,10 @@ abstract class DDM_Scaffold_Abstract {
     protected function getColumnFilters($column) {
         $filters = array();
         $filters[] = 'StringTrim';
+
+        if ($column['COLUMN_NAME'] == 'email') {
+            $validators[] = 'StringToLower';
+        }
 
         return $filters;
     }

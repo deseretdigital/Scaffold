@@ -2159,12 +2159,27 @@ return parent::findDependentRowset($dependentTable, $ruleKey, $select);
         $this->output($baseClassName . '... ', false);
 
         $baseProperties = array();
+
+        $baseProperties[] = array(
+            'name'         => '_tableClass',
+            'visibility'   => 'protected',
+            'defaultValue' => $this->getTableClass($table),
+            'docblock' => 'Zend_Db_Table_Abstract class name',
+        );
+
+        $baseProperties[] = array(
+            'name' => '_inputPrefix',
+            'visibility' => 'protected',
+            'defaultValue' => strtolower($table['namespace']) . '_' . strtolower($table['classNamePartial']),
+            'docblock' => 'Value to use when prefixing the input names',
+        );
+
         $baseMethods = array();
 
+        $codeCreateElements = '';
         foreach ($table['COLUMNS'] as $column) {
             $label = $this->getColumnLabel($column);
-            $inputName = $this->getColumnInputName($table, $column);
-            $variableName = preg_replace('/[^\w_]/', '', $inputName);
+            $variableName = preg_replace('/[^\w_]/', '', $column['COLUMN_NAME']);
             $element = $this->getColumnFormElement($column);
             $maxLength = $this->getColumnMaxLength($column);
             $validators = $this->getColumnValidators($column);
@@ -2173,13 +2188,62 @@ return parent::findDependentRowset($dependentTable, $ruleKey, $select);
             $inputOptions = array();
             $inputAttributes = array();
 
+            if ($column['DATA_TYPE'] == 'enum') {
+                $populateFunctionName = 'populate_' . $column['COLUMN_NAME'];
+                $populateFunctionName = $this->makeClassName($populateFunctionName, false);
+
+                $emptyOption = '';
+                if ($column['IS_NULLABLE'] === 'YES') {
+                    $emptyOption = "\$selectInput->addMultiOption('', '');\n\t\$selectInput->setRequired(false);";
+                }
+
+                $options = array();
+                foreach ($column['VALUES'] as $value) {
+                    $options[$value] = $value;
+                }
+                $populateEnum = array(
+                    'name' => $populateFunctionName,
+                    'visibility' => 'protected',
+                    'parameters' => array(
+                        array(
+                            'name' => 'keyField',
+                            'defaultValue' => null,
+                        ),
+                        array(
+                            'name' => 'valueField',
+                            'defaultValue' => null,
+                        ),
+                    ),
+                    'body' => "
+\$selectInput = \$this->getElement(\$this->convertToFormKey('{$column['COLUMN_NAME']}'));
+\$options = ".$this->convertToPhpCodeString($options).";
+if (count(\$options)) {
+    $emptyOption
+    \$selectInput->addMultiOptions(\$options);
+}
+",
+                    'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                        'shortDescription' => 'Populates the ' . $column['COLUMN_NAME'] . ' field',
+                        'tags' => array(
+                            new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                                'paramname' => 'keyField',
+                            )),
+                            new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                                'paramname' => 'valueField',
+                            )),
+                        )
+                    )),
+                );
+                $baseMethods[] = $populateEnum;
+            }
+
             if (count($validators)) {
                 $inputOptions['validators'] = $validators;
             }
             if (count($filters)) {
                 $inputOptions['filters'] = $filters;
             }
-            if ($label !== false) {
+            if ($label !== false && $element != 'Zend_Form_Element_Hidden') {
                 $inputOptions['label'] = $label;
             }
             if (!empty($maxLength)) {
@@ -2187,15 +2251,15 @@ return parent::findDependentRowset($dependentTable, $ruleKey, $select);
             }
             $inputOptions = $this->convertToPhpCodeString($inputOptions);
 
-            $codeCreateElements = "\$$variableName = new $element( '$inputName',\n\t$inputOptions\n);";
+            $codeCreateElements .= "\$$variableName = new $element(\$this->convertToFormKey('{$column['COLUMN_NAME']}'),\n\t$inputOptions\n);";
             if (count($inputAttributes)) {
                 foreach ($inputAttributes as $key => $value) {
-                    $codeCreateElements .= "\n\$$variableName" . "->setAttrib('$key', '$value');\n";
+                    $codeCreateElements .= "\n\$$variableName" . "->setAttrib('$key', '$value');";
                     if ($key == 'maxlength') {
                         if ($value > 1000000) {
                             $value = 1000000;
                         }
-                        if ($this->isColumnNumeric($column)) {
+                        if (!$this->isColumnNumeric($column)) {
                             // stringLength checks type, must be a string.
                             $codeCreateElements .= "\n\$$variableName" . "->addValidator('stringLength', false, array(0, $value));";
                         }
@@ -2203,15 +2267,23 @@ return parent::findDependentRowset($dependentTable, $ruleKey, $select);
                 }
             }
 
+            // Remove decorators if we have a hidden element
+            if ($element == 'Zend_Form_Element_Hidden') {
+                $codeCreateElements .= "\n\${$variableName}->setDecorators(array('ViewHelper'));";
+            }
+
             $codeCreateElements .= "\n\$this->addElement(\$$variableName);\n\n";
         }
 
-        $codeCreateElements .= "\$this->addElement( \n\t'submit',\n\t'Submit');\n";
+        $codeCreateElements .= "\$this->addElement('submit', 'Submit');\n";
 
         // constructor
         $const = array(
             'name' => '__construct',
-            'body' => "parent::__construct();\n$codeCreateElements",
+            'body' => "
+parent::__construct();
+$codeCreateElements
+\$this->populateOptions();",
             'docblock'   => new Zend_CodeGenerator_Php_Docblock(array(
                 'shortDescription' => 'The constructor',
                 )),
@@ -2270,7 +2342,280 @@ return parent::findDependentRowset($dependentTable, $ruleKey, $select);
         $this->output($baseClassName . '... ', false);
 
         $baseProperties = array();
+
+        $baseProperties[] = array(
+            'name' => '_tableClass',
+            'visibility' => 'protected',
+            'defaultValue' => null,
+            'docblock' => 'Zend_Db_Table_Abstract class name',
+        );
+
+        $baseProperties[] = array(
+            'name' => '_inputPrefix',
+            'visibility' => 'protected',
+            'defaultValue' => null,
+            'docblock' => 'Value to use when prefixing the input names',
+        );
+
         $baseMethods = array();
+
+        $getTable = array(
+            'name' => 'getTable',
+            'visibility' => 'protected',
+            'body' => "
+if (\$this->_tableClass === null) {
+    throw new Zend_Form_Exception('\$this->_tableClass is null. Table cannot be returned without first specifying a class.');
+}
+
+\$table = new \$this->_tableClass();
+return \$table;
+",
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Get the related table class',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                       'datatype' => 'Zend_Db_Table_Abstract',
+                    )),
+                ),
+            )),
+        );
+        $baseMethods[] = $getTable;
+
+        $convertToFormKey = array(
+            'name' => 'convertToFormKey',
+            'visibility' => 'protected',
+            'parameters' => array(
+                array('name' => 'key'),
+            ),
+            'body' => "
+if (strpos(\$key, \$this->_inputPrefix . '_') !== 0) {
+    return \$this->_inputPrefix . '_' . \$key;
+}
+return \$key;
+",
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Returns the form version of the key for us in data arrays and form input names' ,
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramname' => 'key',
+                        'datatype' => 'string',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'datatype' => 'string',
+                    )),
+                ),
+            )),
+        );
+        $baseMethods[] = $convertToFormKey;
+
+        $convertToDbKey = array(
+            'name' => 'convertToDbKey',
+            'visibility' => 'protected',
+            'parameters' => array(
+                array('name' => 'key'),
+            ),
+            'body' => "
+return str_replace(\$this->_inputPrefix . '_', '', \$key);
+",
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Returns the db version of the key for us in data arrays' ,
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramname' => 'key',
+                        'datatype' => 'string',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'datatype' => 'string',
+                    )),
+                ),
+            )),
+        );
+        $baseMethods[] = $convertToDbKey;
+
+        $process = array(
+            'name' => 'process',
+            'visibility' => 'public',
+            'parameters' => array(
+                array(
+                    'name' => 'request',
+                    'type' => 'Zend_Controller_Request_Abstract',
+                ),
+            ),
+            'body' => "
+\$primaryKeys = \$this->getTable()->getPrimaryKeys();
+\$lookupKeys = array();
+foreach (\$primaryKeys as \$primaryKey) {
+    if (\$request->getParam(\$primaryKey) !== null) {
+        \$lookupKeys[\$primaryKey] = \$request->getParam(\$primaryKey);
+    } else {
+        \$formKey = \$this->convertToFormKey(\$primaryKey);
+        if (\$request->getParam(\$formKey) !== null) {
+            \$lookupKeys[\$primaryKey] = \$request->getParam(\$formKey);
+        }
+    }
+}
+
+if (\$this->canLoad(\$lookupKeys)) {
+    \$table = \$this->getTable();
+    \$rowset = \$table->find(\$lookupKeys);
+    if (\$rowset->count() == 1) {
+        \$row = \$rowset->current();
+        \$data = \$row->toArray();
+
+        \$populate = array();
+        foreach (\$data as \$key => \$value) {
+            \$formKey = \$this->convertToFormKey(\$key);
+            \$populate[\$formKey] = \$value;
+        }
+
+        \$this->populate(\$populate);
+    }
+}
+
+if (\$request->isPost()) {
+    \$formData = \$request->getParams();
+
+    if (\$this->isValid(\$formData)) {
+        \$dbData = array();
+        foreach (\$formData as \$key => \$value) {
+            \$dbKey = \$this->convertToDbKey(\$key);
+            \$dbData[\$dbKey] = \$value;
+        }
+
+        if (\$this->canSave(\$dbData)) {
+            \$table = \$this->getTable();
+            \$result = null;
+            if (count(\$lookupKeys) > 0) {
+                \$rowset = \$table->find(\$lookupKeys);
+                if (\$rowset->count() == 1) {
+                    \$row = \$rowset->current();
+                    \$row->setFromArray(\$dbData);
+                    \$result = \$row->save();
+                }
+            }
+
+            if (\$result === null) {
+                \$row = \$table->createRow(\$dbData);
+                \$result = \$row->save();
+            }
+
+            \$this->postProcess(\$result);
+            return \$result;
+        }
+    }
+}
+return false;",
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Processes the form',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'request',
+                        'datatype' => 'Zend_Controller_Request_Abstract',
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'datatype'  => 'mixed'
+                    )),
+                ),
+            )),
+        );
+        $baseMethods[] = $process;
+
+        $postProcess = array(
+            'name' => 'postProcess',
+            'parameters' => array(
+                array('name' => 'result'),
+            ),
+            'body' => 'return;',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Performs any work that needs to happen after a form has been processed',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'result',
+                    )),
+                ),
+            )),
+        );
+        $baseMethods[] = $postProcess;
+
+        // Can the form load a piece of data? (a place to extend and check ALCs, etc) extended canLoad should use this->addError
+        $canLoad = array(
+            'name' => 'canLoad',
+            'visibility' => 'protected',
+            'parameters' => array(
+                array(
+                    'name' => 'primaryKeys',
+                    'type' => 'array',
+                ),
+            ),
+            'body' => 'return true;',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Can this item be loaded in the form?',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'primaryKeys',
+                        'datatype' => 'array'
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'datatype'  => 'boolean'
+                    )),
+                ),
+            )),
+        );
+        $baseMethods[] = $canLoad;
+
+        // Can the form save a piece of data? (a place to extend and check ALCs, etc) extended canSave should use this->addError
+        $canSave = array(
+            'name' => 'canSave',
+            'visibility' => 'protected',
+            'parameters' => array(
+                array('name' => 'data'),
+            ),
+            'body' => 'return true;',
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => 'Can this item be saved?',
+                'tags' => array(
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                        'paramName' => 'data',
+                        'datatype' => 'array'
+                    )),
+                    new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
+                        'datatype'  => 'boolean'
+                    )),
+                ),
+            )),
+        );
+        $baseMethods[] = $canSave;
+
+        $populateOptions = array(
+            'name' => 'populateOptions',
+            'visibility' => 'protected',
+            'body' => "
+\$methodFilter = new Zend_Filter_Word_UnderscoreToCamelCase();
+foreach (\$this->getElements() as \$element) {
+    if (is_subclass_of(\$element, 'Zend_Form_Element_Multi') && !\$element->getMultiOptions()) {
+        \$method = \$element->getAttrib('populateOptions');
+        if (\$method === null) {
+            \$method = 'populate_' . \$this->convertToDbKey(\$element->getName());
+            \$method = lcfirst(\$methodFilter->filter(\$method));
+        } else if (\$method === false) {
+            continue;
+        }
+
+        if (method_exists(\$this, \$method)) {
+            \$this->\$method();
+        } else {
+            throw new Zend_Form_Exception('No method ('.\$method.') of populating field: ' . \$element->getName());
+        }
+    }
+}
+",
+            'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
+                'shortDescription' => "Populate Element Multi-Options
+
+NOTE: Set element attribute['populateOptions'] = 'methodName' to override the default derived from the element name. To disable the populateOptions altogether, set attribute['populateOptions'] = false"
+            )),
+        );
+        $baseMethods[] = $populateOptions;
 
         $baseDocBlock = $baseClassName . "\n\n";
         $baseDocBlock .= 'Generated base class file for forms' . "\n";
