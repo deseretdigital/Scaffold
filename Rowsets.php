@@ -2588,7 +2588,7 @@ return false;",
 
         $populateOptions = array(
             'name' => 'populateOptions',
-            'visibility' => 'protected',
+            'visibility' => 'public',
             'body' => "
 \$methodFilter = new Zend_Filter_Word_UnderscoreToCamelCase();
 foreach (\$this->getElements() as \$element) {
