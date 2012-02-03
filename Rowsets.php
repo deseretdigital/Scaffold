@@ -1285,6 +1285,9 @@ $this->_pointer = 0;
                 ));
 
                 $setBody .= '
+if(empty($value) && !is_numeric($value)) {
+    $value = null;
+}
 if ($value == \'CURRENT_TIMESTAMP\') {
     $value = date(\''.$dateFormat.'\');
 } else if (is_numeric($value)) {
