@@ -2477,7 +2477,7 @@ if (\$request->isPost()) {
 
     if (\$this->isValid(\$formData)) {
         \$dbData = array();
-        \$formData = \$this->getValues(\$formData);
+        \$formData = \$this->getValues();
         foreach (\$formData as \$key => \$value) {
             \$dbKey = \$this->convertToDbKey(\$key);
             \$dbData[\$dbKey] = \$value;
