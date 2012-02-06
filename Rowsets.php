@@ -1283,7 +1283,14 @@ $this->_pointer = 0;
                     'datatype' => 'boolean',
                     'description' => 'OPTIONAL',
                 ));
-
+                
+                if($column['IS_NULLABLE'] == 'YES'){
+                    $setBody .= '
+if(empty($value) && !is_numeric($value)) {
+    $value = null;
+}';
+                }
+                
                 $setBody .= '
 if ($value == \'CURRENT_TIMESTAMP\') {
     $value = date(\''.$dateFormat.'\');
