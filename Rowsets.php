@@ -2730,9 +2730,9 @@ NOTE: Set element attribute['populateOptions'] = 'methodName' to override the de
 
         $properties = array();
         foreach ($rows as $index => $row) {
-            $name = preg_replace('/[^A-z0-9 ]/i', '_', $row[$options['key']]);
+            $name = preg_replace('/[^A-z0-9]/i', '_', $row[$options['key']]);
             if (array_key_exists('prefix', $options)) {
-                $name = preg_replace('/[^A-z0-9 ]/i', '_', $options['prefix']) . '_' . $name;
+                $name = preg_replace('/[^A-z0-9]/i', '_', $options['prefix']) . '_' . $name;
             }
             $name = strtoupper($name);
 
