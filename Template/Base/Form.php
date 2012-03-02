@@ -192,6 +192,7 @@ abstract class DDM_Scaffold_Template_Base_Form extends ZendX_JQuery_Form
                 }
             }
         }
+        // This comment to fix bug in code generator - http://framework.zend.com/issues/browse/ZF-9501#comment-44390
     }
 
 

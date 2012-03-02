@@ -16,6 +16,7 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
 
     /**
      * Where should the default values come for new empty rows?
+     * The code generator replaces self::DEFAULT_CLASS with its value, 'defaultClass'
      */
     protected $_defaultSource = self::DEFAULT_CLASS;
 
