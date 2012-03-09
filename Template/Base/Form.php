@@ -11,11 +11,15 @@ abstract class DDM_Scaffold_Template_Base_Form extends ZendX_JQuery_Form
 
     /**
      * Zend_Db_Table_Abstract class name
+     *
+     * @var string|null
      */
     protected $_tableClass = null;
 
     /**
      * Value to use when prefixing the input names
+     *
+     * @var string|null
      */
     protected $_inputPrefix = null;
 
@@ -29,7 +33,7 @@ abstract class DDM_Scaffold_Template_Base_Form extends ZendX_JQuery_Form
         if ($this->_tableClass === null) {
             throw new Zend_Form_Exception('$this->_tableClass is null. Table cannot be returned without first specifying a class.');
         }
-        
+
         $table = new $this->_tableClass();
         return $table;
     }
@@ -38,6 +42,7 @@ abstract class DDM_Scaffold_Template_Base_Form extends ZendX_JQuery_Form
      * Returns the form version of the key for us in data arrays and form input names
      *
      * @param string $key
+     *
      * @return string
      */
     protected function convertToFormKey($key)
@@ -52,6 +57,7 @@ abstract class DDM_Scaffold_Template_Base_Form extends ZendX_JQuery_Form
      * Returns the db version of the key for us in data arrays
      *
      * @param string $key
+     *
      * @return string
      */
     protected function convertToDbKey($key)
@@ -63,6 +69,7 @@ abstract class DDM_Scaffold_Template_Base_Form extends ZendX_JQuery_Form
      * Processes the form
      *
      * @param Zend_Controller_Request_Abstract $request
+     *
      * @return mixed
      */
     public function process(Zend_Controller_Request_Abstract $request)
@@ -79,27 +86,27 @@ abstract class DDM_Scaffold_Template_Base_Form extends ZendX_JQuery_Form
                 }
             }
         }
-        
+
         if ($this->canLoad($lookupKeys)) {
             $table = $this->getTable();
             $rowset = $table->find($lookupKeys);
             if ($rowset->count() == 1) {
                 $row = $rowset->current();
                 $data = $row->toArray();
-        
+
                 $populate = array();
                 foreach ($data as $key => $value) {
                     $formKey = $this->convertToFormKey($key);
                     $populate[$formKey] = $value;
                 }
-        
+
                 $this->populate($populate);
             }
         }
-        
+
         if ($request->isPost()) {
             $formData = $request->getParams();
-        
+
             if ($this->isValid($formData)) {
                 $dbData = array();
                 $formData = $this->getValues();
@@ -107,7 +114,7 @@ abstract class DDM_Scaffold_Template_Base_Form extends ZendX_JQuery_Form
                     $dbKey = $this->convertToDbKey($key);
                     $dbData[$dbKey] = $value;
                 }
-        
+
                 if ($this->canSave($dbData)) {
                     $table = $this->getTable();
                     $result = null;
@@ -119,12 +126,12 @@ abstract class DDM_Scaffold_Template_Base_Form extends ZendX_JQuery_Form
                             $result = $row->save();
                         }
                     }
-        
+
                     if ($result === null) {
                         $row = $table->createRow($dbData);
                         $result = $row->save();
                     }
-        
+
                     $this->postProcess($result);
                     return $result;
                 }
@@ -147,6 +154,7 @@ abstract class DDM_Scaffold_Template_Base_Form extends ZendX_JQuery_Form
      * Can this item be loaded in the form?
      *
      * @param array $primaryKeys
+     *
      * @return boolean
      */
     protected function canLoad(array $primaryKeys)
@@ -158,6 +166,7 @@ abstract class DDM_Scaffold_Template_Base_Form extends ZendX_JQuery_Form
      * Can this item be saved?
      *
      * @param array $data
+     *
      * @return boolean
      */
     protected function canSave($data)
@@ -184,7 +193,7 @@ abstract class DDM_Scaffold_Template_Base_Form extends ZendX_JQuery_Form
                 } else if ($method === false) {
                     continue;
                 }
-        
+
                 if (method_exists($this, $method)) {
                     $this->$method();
                 } else {

@@ -342,7 +342,7 @@ return $this->findByColumnValue(\''.$indexes['COLUMN_NAME'].'\', $value, $select
         $baseFile = $this->projectRoot . $generatedBasePath . 'Table.php';
         $baseClassName = $this->convertFileNameToClassName($baseFile, $this->paths['library']);
         $this->output($baseClassName . '... ', false);
-        
+
         $base = Zend_CodeGenerator_Php_Class::fromReflection(
             new Zend_Reflection_Class('DDM_Scaffold_Template_Base_Table')
         );
@@ -733,14 +733,14 @@ return $this->findByColumnValue(\''.$indexes['COLUMN_NAME'].'\', $value, $select
                     'datatype' => 'boolean',
                     'description' => 'OPTIONAL',
                 ));
-                
+
                 if($column['IS_NULLABLE'] == 'YES'){
                     $setBody .= '
 if(empty($value) && !is_numeric($value)) {
     $value = null;
 }';
                 }
-                
+
                 $setBody .= '
 if ($value == \'CURRENT_TIMESTAMP\') {
     $value = date(\''.$dateFormat.'\');
@@ -1031,7 +1031,7 @@ return $this->'.$variableName.'[$keyName];',
         $baseFile = $this->projectRoot . $generatedBasePath . 'Row.php';
         $baseClassName = $this->convertFileNameToClassName($baseFile, $this->paths['library']);
         $this->output($baseClassName . '... ', false);
-                
+
         $base = Zend_CodeGenerator_Php_Class::fromReflection(
             new Zend_Reflection_Class('DDM_Scaffold_Template_Base_Row')
         );

@@ -13,6 +13,7 @@ abstract class DDM_Scaffold_Template_Base_Rowset extends Zend_Db_Table_Rowset_Ab
      * Groups a rowset by a specified columnName
      *
      * @param string $columnName
+     *
      * @return array
      */
     public function groupBy($columnName)
@@ -35,6 +36,7 @@ abstract class DDM_Scaffold_Template_Base_Rowset extends Zend_Db_Table_Rowset_Ab
      *
      * @param string $columnName
      * @param string $value
+     *
      * @return Zend_Db_Table_Rowset_Abstract
      */
     public function filterBy($columnName, $value)
@@ -52,6 +54,7 @@ abstract class DDM_Scaffold_Template_Base_Rowset extends Zend_Db_Table_Rowset_Ab
      * Returns a row matching the set an array of primary keys
      *
      * @param array $keys
+     *
      * @return Zend_Db_Table_Row_Abstract
      */
     public function getRowByPrimaryKeys(array $data)
@@ -63,20 +66,20 @@ abstract class DDM_Scaffold_Template_Base_Rowset extends Zend_Db_Table_Rowset_Ab
                 $lookupKeys[$primaryKey] = $data[$primaryKey];
             }
         }
-        
+
         if (count($lookupKeys) != count($primaryKeys)) {
             throw new Zend_Db_Table_Rowset_Exception('Expecting '.count($primaryKeys).' primary keys. Only '.count($lookupKeys).' passed to getRowByPrimaryKeys.');
         }
-        
+
         $rowset = $this;
         foreach ($lookupKeys as $lookupKey => $lookupKeyValue) {
             $rowset = $rowset->filterBy($lookupKey, $lookupKeyValue);
         }
-        
+
         if (!count($rowset) > 0) {
             throw new Zend_Db_Table_Rowset_Exception('Requested row not found in rowset.');
         }
-        
+
         return $rowset->current();
     }
 
@@ -123,7 +126,8 @@ abstract class DDM_Scaffold_Template_Base_Rowset extends Zend_Db_Table_Rowset_Ab
     /**
      * Deletes all the rows in the rowset
      *
-     * @return boolean 
+     * @return boolean
+     *
      * @throws Zend_Db_Table_Rowset_Exception
      */
     public function delete()
@@ -146,7 +150,7 @@ abstract class DDM_Scaffold_Template_Base_Rowset extends Zend_Db_Table_Rowset_Ab
     public function setFromArray(array $data)
     {
         $primaryKeys = $this->getTable()->getPrimaryKeys();
-        
+
         foreach ($data as $datum) {
             $keys = array();
             foreach ($primaryKeys as $primaryKey) {
@@ -154,14 +158,14 @@ abstract class DDM_Scaffold_Template_Base_Rowset extends Zend_Db_Table_Rowset_Ab
                     $keys[$primaryKey] = $datum[$primaryKey];
                 }
             }
-        
+
             try {
                 $row = $this->getRowByPrimaryKeys($keys);
             } catch (Zend_Db_Table_Rowset_Exception $e) {
                 $row = $this->createRow();
                 $this->addRow($row);
             }
-        
+
             $row->setFromArray($datum);
         }
         // This comment to fix bug in code generator - http://framework.zend.com/issues/browse/ZF-9501#comment-44390
@@ -172,7 +176,9 @@ abstract class DDM_Scaffold_Template_Base_Rowset extends Zend_Db_Table_Rowset_Ab
      *
      * @param string $method
      * @param array $args
-     * @return array 
+     *
+     * @return array
+     *
      * @throws Zend_Db_Table_Rowset_Exception If an invalid method is called.
      */
     public function __call($method, array $args)
@@ -189,12 +195,12 @@ abstract class DDM_Scaffold_Template_Base_Rowset extends Zend_Db_Table_Rowset_Ab
             }
             return;
         }
-        
+
         throw new Zend_Db_Table_Rowset_Exception('Unrecognized method "'.$method.'()"');
     }
 
     /**
-     * Redirects __get to a getColumnName method
+     * Redirects __get to a getColumnName method and ensures we go through the rowsets current()
      *
      * @return array
      */

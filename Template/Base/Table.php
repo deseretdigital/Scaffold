@@ -11,12 +11,16 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
 
     /**
      * The table metadata has been cached
+     *
+     * @var boolean
      */
     protected $_metadataCacheInClass = true;
 
     /**
      * Where should the default values come for new empty rows?
      * The code generator replaces self::DEFAULT_CLASS with its value, 'defaultClass'
+     *
+     * @var string
      */
     protected $_defaultSource = self::DEFAULT_CLASS;
 
@@ -54,6 +58,8 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
      * Returns a new rowset (not from the database) optionally populated with the
      * passed in $data
      *
+     * @param array|null $data
+     *
      * @return Zend_Db_Table_Rowset_Abstract
      */
     public function createRowset(array $data = null)
@@ -78,6 +84,7 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
      * @param string $columnName
      * @param string|number|null $value
      * @param Zend_Db_Select|Zend_Db_Table_Select|null OPTIONAL $select
+     *
      * @return Zend_Db_Table_Rowset_Abstract
      */
     public function findByColumnValue($columnName, $value, Zend_Db_Select $select = null)
@@ -86,14 +93,14 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
             $select = $this->select();
         }
         $select->from($this);
-        
+
         $columnName = $this->getAdapter()->quoteIdentifier($columnName);
         if (!is_array($value)) {
             $select->where($columnName . ' = ?', $value);
         } else {
             $expressions = array();
             $inValues = array();
-        
+
             foreach ($value as $val) {
                 if ($val === null) {
                     $expressions['null'] = $columnName . ' IS NULL';
@@ -101,14 +108,14 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
                     $inValues[] = $this->getAdapter()->quoteInto('?', $val);
                 }
             }
-        
+
             if (!empty($inValues)) {
                 $expressions['in'] = $columnName . ' IN ('.implode(',', $inValues).')';
             }
-        
+
             $select->where(implode(' OR ', $expressions));
         }
-        
+
         return $this->fetchAll($select);
     }
 

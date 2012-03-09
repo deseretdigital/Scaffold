@@ -11,11 +11,15 @@ abstract class DDM_Scaffold_Template_Base_Row extends Zend_Db_Table_Row_Abstract
 
     /**
      * The filter used to convert strings to function names
+     *
+     * @var Zend_Filter_Word_Separator_Abstract|null
      */
     protected $_functionNameFilter = null;
 
     /**
      * The filter used to convert function names to strings
+     *
+     * @var Zend_Filter_Word_Separator_Abstract|null
      */
     protected $_columnNameFilter = null;
 
@@ -23,7 +27,9 @@ abstract class DDM_Scaffold_Template_Base_Row extends Zend_Db_Table_Row_Abstract
      * Constructor overwritten to use setter methods
      *
      * @param array $config OPTIONAL Array of user-specified config options.
-     * @return void 
+     *
+     * @return void
+     *
      * @throws Zend_Db_Table_Row_Exception
      */
     public function __construct(array $config = array ())
@@ -34,7 +40,7 @@ abstract class DDM_Scaffold_Template_Base_Row extends Zend_Db_Table_Row_Abstract
         } elseif ($this->_tableClass !== null) {
             $this->_table = $this->_getTableFromString($this->_tableClass);
         }
-        
+
         if (isset($config['data'])) {
             if (!is_array($config['data'])) {
                 throw new Zend_Db_Table_Row_Exception('Data must be an array');
@@ -47,17 +53,17 @@ abstract class DDM_Scaffold_Template_Base_Row extends Zend_Db_Table_Row_Abstract
         if (isset($config['stored']) && $config['stored'] === true) {
             $this->_cleanData = $this->_data;
         }
-        
+
         if (isset($config['readOnly']) && $config['readOnly'] === true) {
             $this->setReadOnly(true);
         }
-        
+
         // Retrieve primary keys from table schema
         if (($table = $this->_getTable())) {
             $info = $table->info();
             $this->_primary = (array) $info['primary'];
         }
-        
+
         $this->init();
     }
 
@@ -66,35 +72,38 @@ abstract class DDM_Scaffold_Template_Base_Row extends Zend_Db_Table_Row_Abstract
      * accept
      *
      * @param array $data
+     *
      * @return Zend_Db_Table_Row_Abstract
      */
     public function setFromArray(array $data)
     {
         parent::setFromArray($data);
         $data = array_diff_key($data, $this->_data);
-        
+
         foreach ($data as $name => $value) {
             $function = $this->getFunctionName('set_' . $name);
             if (method_exists($this, $function)) {
                 $this->$function($value);
             }
         }
-        
+
         return $this;
     }
 
     /**
-     * Turns get and set method calls to __get and __set calls
+     * Turns get and set method calls to getColumnValue and setColumnValue calls
      *
      * @param string $method
      * @param array $args OPTIONAL Zend_Db_Table_Select query modifier
-     * @return Zend_Db_Table_Row_Abstract|Zend_Db_Table_Rowset_Abstract 
+     *
+     * @return Zend_Db_Table_Row_Abstract|Zend_Db_Table_Rowset_Abstract
+     *
      * @throws Zend_Db_Table_Row_Exception If an invalid method is called.
      */
     public function __call($method, array $args)
     {
         $columnName = $this->getColumnName($method);
-        
+
         if (strpos($columnName, 'get_') === 0) {
             $columnName = str_replace('get_', '', $columnName);
             return $this->getColumnValue($columnName);
@@ -102,7 +111,7 @@ abstract class DDM_Scaffold_Template_Base_Row extends Zend_Db_Table_Row_Abstract
             $columnName = str_replace('set_', '', $columnName);
             return $this->setColumnValue($columnName, $args[0]);
         }
-        
+
         return parent::__call($method, $args);
     }
 
@@ -110,6 +119,7 @@ abstract class DDM_Scaffold_Template_Base_Row extends Zend_Db_Table_Row_Abstract
      * Redirects __get to a getColumnName method
      *
      * @param string $columnName
+     *
      * @return mixed
      */
     public function __get($columnName)
@@ -123,6 +133,7 @@ abstract class DDM_Scaffold_Template_Base_Row extends Zend_Db_Table_Row_Abstract
      *
      * @param string $columnName
      * @param mixed $value
+     *
      * @return void
      */
     public function __set($columnName, $value)
@@ -132,10 +143,12 @@ abstract class DDM_Scaffold_Template_Base_Row extends Zend_Db_Table_Row_Abstract
     }
 
     /**
-     * Retrieve row field value
+     * Retrieve row field value using old __get logic
      *
      * @param string $columnName The user-specified column name.
+     *
      * @return string The corresponding column value.
+     *
      * @throws Zend_Db_Table_Row_Exception if the $columnName is not a column in the
      * row.
      */
@@ -145,11 +158,13 @@ abstract class DDM_Scaffold_Template_Base_Row extends Zend_Db_Table_Row_Abstract
     }
 
     /**
-     * Set row field value
+     * Set row field value using old __set logic
      *
      * @param string $columnName The column key.
      * @param mixed $value The value for the property.
-     * @return void 
+     *
+     * @return void
+     *
      * @throws Zend_Db_Table_Row_Exception
      */
     protected function setColumnValue($columnName, $value)
@@ -168,18 +183,18 @@ abstract class DDM_Scaffold_Template_Base_Row extends Zend_Db_Table_Row_Abstract
     }
 
     /**
-     * Returns the column/value data as an array.
+     * Returns the column/value data as an array using getters
      *
      * @return array
      */
     public function toArray()
     {
         $data = array();
-        
+
         foreach ($this->_data as $columnName => $value) {
             $data[$columnName] = $this->__get($columnName);
         }
-        
+
         return $data;
     }
 
@@ -187,6 +202,7 @@ abstract class DDM_Scaffold_Template_Base_Row extends Zend_Db_Table_Row_Abstract
      * Converts a string to the function name
      *
      * @param string $functionName
+     *
      * @return string
      */
     protected function getFunctionName($functionName)
@@ -194,7 +210,7 @@ abstract class DDM_Scaffold_Template_Base_Row extends Zend_Db_Table_Row_Abstract
         if ($this->_functionNameFilter === null) {
             $this->_functionNameFilter = new Zend_Filter_Word_UnderscoreToCamelCase();
         }
-        
+
         return lcfirst($this->_functionNameFilter->filter($functionName));
     }
 
@@ -202,6 +218,7 @@ abstract class DDM_Scaffold_Template_Base_Row extends Zend_Db_Table_Row_Abstract
      * Converts a string to a column name
      *
      * @param string $columnName
+     *
      * @return string
      */
     protected function getColumnName($columnName)
@@ -209,7 +226,7 @@ abstract class DDM_Scaffold_Template_Base_Row extends Zend_Db_Table_Row_Abstract
         if ($this->_columnNameFilter === null) {
             $this->_columnNameFilter = new Zend_Filter_Word_CamelCaseToUnderscore();
         }
-        
+
         return strtolower($this->_columnNameFilter->filter($columnName));
     }
 
@@ -220,6 +237,7 @@ abstract class DDM_Scaffold_Template_Base_Row extends Zend_Db_Table_Row_Abstract
      * @param string|Zend_Db_Table_Abstract $dependentTable
      * @param string $ruleKey OPTIONAL
      * @param Zend_Db_Table_Select $select OPTIONAL
+     *
      * @return Zend_Db_Table_Rowset_Abstract Query result from $dependentTable
      */
     public function findDependentRowset($dependentTable, $ruleKey = null, Zend_Db_Table_Select $select = null)
@@ -228,10 +246,10 @@ abstract class DDM_Scaffold_Template_Base_Row extends Zend_Db_Table_Row_Abstract
             if (is_string($dependentTable)) {
                 $dependentTable = $this->_getTableFromString($dependentTable);
             }
-        
+
             // getReference will throw a Zend_Db_Table_Exception if the table reference is invalid.
             $dependentTable->getReference($this->getTableClass(), $ruleKey);
-        
+
             return $dependentTable->createRowset();
         }
         return parent::findDependentRowset($dependentTable, $ruleKey, $select);
