@@ -8,6 +8,12 @@
  */
 abstract class DDM_Scaffold_Template_Base_Rowset extends Zend_Db_Table_Rowset_Abstract
 {
+    /**
+     * The filter used to convert strings to function names
+     *
+     * @var Zend_Filter_Word_Separator_Abstract|null
+     */
+    protected $_functionNameFilter = null;
 
     /**
      * Groups a rowset by a specified columnName
@@ -18,7 +24,9 @@ abstract class DDM_Scaffold_Template_Base_Rowset extends Zend_Db_Table_Rowset_Ab
      */
     public function groupBy($columnName)
     {
-        $getter = 'get_' . $columnName;
+        // Call through the getter so we can use custom columns that
+        // may not be present in the actual database
+        $getter = $this->getFunctionName('get_' . $columnName);
         $groups = array();
         foreach ($this as $row) {
             $key = $row->$getter();
@@ -41,9 +49,12 @@ abstract class DDM_Scaffold_Template_Base_Rowset extends Zend_Db_Table_Rowset_Ab
      */
     public function filterBy($columnName, $value)
     {
+        // Call through the getter so we can use custom columns that
+        // may not be present in the actual database
+        $getter = $this->getFunctionName('get_' . $columnName);
         $rowset = $this->getTable()->createRowset();
         foreach ($this as $row) {
-            if ($row->__get($columnName) == $value) {
+            if ($row->$getter() == $value) {
                 $rowset->addRow($row);
             }
         }
@@ -234,5 +245,19 @@ abstract class DDM_Scaffold_Template_Base_Rowset extends Zend_Db_Table_Rowset_Ab
         $this->_pointer = 0;
     }
 
+    /**
+     * Converts a string to the function name
+     *
+     * @param string $functionName
+     *
+     * @return string
+     */
+    protected function getFunctionName($functionName)
+    {
+        if ($this->_functionNameFilter === null) {
+            $this->_functionNameFilter = new Zend_Filter_Word_UnderscoreToCamelCase();
+        }
 
+        return lcfirst($this->_functionNameFilter->filter($functionName));
+    }
 }
