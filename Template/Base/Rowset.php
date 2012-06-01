@@ -255,7 +255,7 @@ abstract class DDM_Scaffold_Template_Base_Rowset extends Zend_Db_Table_Rowset_Ab
     protected function getFunctionName($functionName)
     {
         if ($this->_functionNameFilter === null) {
-            $this->_functionNameFilter = new Zend_Filter_Word_UnderscoreToCamelCase();
+            $this->_functionNameFilter = new DDM_Filter_Word_UnderscoreToCamelCase();
         }
 
         return lcfirst($this->_functionNameFilter->filter($functionName));

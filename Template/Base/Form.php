@@ -183,7 +183,7 @@ abstract class DDM_Scaffold_Template_Base_Form extends ZendX_JQuery_Form
      */
     public function populateOptions()
     {
-        $methodFilter = new Zend_Filter_Word_UnderscoreToCamelCase();
+        $methodFilter = new DDM_Filter_Word_UnderscoreToCamelCase();
         foreach ($this->getElements() as $element) {
             if (is_subclass_of($element, 'Zend_Form_Element_Multi') && !$element->getMultiOptions()) {
                 $method = $element->getAttrib('populateOptions');

@@ -208,7 +208,7 @@ abstract class DDM_Scaffold_Template_Base_Row extends Zend_Db_Table_Row_Abstract
     protected function getFunctionName($functionName)
     {
         if ($this->_functionNameFilter === null) {
-            $this->_functionNameFilter = new Zend_Filter_Word_UnderscoreToCamelCase();
+            $this->_functionNameFilter = new DDM_Filter_Word_UnderscoreToCamelCase();
         }
 
         return lcfirst($this->_functionNameFilter->filter($functionName));
@@ -224,7 +224,7 @@ abstract class DDM_Scaffold_Template_Base_Row extends Zend_Db_Table_Row_Abstract
     protected function getColumnName($columnName)
     {
         if ($this->_columnNameFilter === null) {
-            $this->_columnNameFilter = new Zend_Filter_Word_CamelCaseToUnderscore();
+            $this->_columnNameFilter = new DDM_Filter_Word_CamelCaseToUnderscore();
         }
 
         return strtolower($this->_columnNameFilter->filter($columnName));

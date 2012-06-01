@@ -28,7 +28,7 @@ abstract class DDM_Scaffold_Abstract {
      */
     public function __construct($projectRoot, $config = array()) {
         $this->projectRoot = $projectRoot;
-        $this->classNameFilter = new Zend_Filter_Word_UnderscoreToCamelCase();
+        $this->classNameFilter = new DDM_Filter_Word_UnderscoreToCamelCase();
 
         if (!array_key_exists('databases', $config)) {
             $config['databases'] = null;
