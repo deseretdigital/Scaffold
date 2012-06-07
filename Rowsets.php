@@ -795,7 +795,9 @@ if ($value === true || $value == 1 || $value === \'true\' || $value === \'TRUE\'
                 if ($column['IS_NULLABLE'] == 'YES') {
                     $setBody .= 'if ($value !== null) {'."\n";
                 }
-                    $setBody .= '$value = sprintf(\'%u\', ip2long($value));'."\n";
+                    $setBody .= 'if (!is_numeric($value)) {'."\n";
+                    $setBody .= "\t".'$value = sprintf(\'%u\', ip2long($value));'."\n";
+                    $setBody .= '}'."\n";
                 if ($column['IS_NULLABLE'] == 'YES') {
                     $setBody .= '}'."\n";
                 }

@@ -68,6 +68,26 @@ abstract class DDM_Scaffold_Template_Base_Row extends Zend_Db_Table_Row_Abstract
     }
 
     /**
+     * Refreshes properties from the database.
+     * Overridden to call $row->toInternalArray()
+     *
+     * @return void
+     */
+    protected function _refresh()
+    {
+        $where = $this->_getWhereQuery();
+        $row = $this->_getTable()->fetchRow($where);
+
+        if (null === $row) {
+            throw new Zend_Db_Table_Row_Exception('Cannot refresh row as parent is missing');
+        }
+
+        $this->_data = $row->toInternalArray();
+        $this->_cleanData = $this->_data;
+        $this->_modifiedFields = array();
+    }
+
+    /**
      * Calls the parent method and then sets any addition data parameters the row can
      * accept
      *
@@ -196,6 +216,15 @@ abstract class DDM_Scaffold_Template_Base_Row extends Zend_Db_Table_Row_Abstract
         }
 
         return $data;
+    }
+
+    /**
+     * Converts the row to an array using the parent method logic
+     *
+     * @return array
+     */
+    public function toInternalArray() {
+        return parent::toArray();
     }
 
     /**
