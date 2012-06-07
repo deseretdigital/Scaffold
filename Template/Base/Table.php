@@ -94,7 +94,9 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
         }
         $select->from($this);
 
+        $tableName = $this->getAdapter()->quoteIdentifier($this->_name);
         $columnName = $this->getAdapter()->quoteIdentifier($columnName);
+        $columnName = $tableName . '.' . $columnName;
         if (!is_array($value)) {
             $select->where($columnName . ' = ?', $value);
         } else {
