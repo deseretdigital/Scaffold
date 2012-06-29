@@ -80,45 +80,17 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
 
     /**
      * Retrieve Rowset from table where $columnName matches $value
-     *
+     * 
+     * @deprecated
      * @param string $columnName
      * @param string|number|null $value
      * @param Zend_Db_Select|Zend_Db_Table_Select|null OPTIONAL $select
      *
      * @return Zend_Db_Table_Rowset_Abstract
      */
-    public function findByColumnValue($columnName, $value, Zend_Db_Select $select = null)
+    public function findByColumnValue($column, $value, Zend_Db_Select $select = null)
     {
-        if ($select === null) {
-            $select = $this->select();
-        }
-        $select->from($this);
-
-        $tableName = $this->getAdapter()->quoteIdentifier($this->_name);
-        $columnName = $this->getAdapter()->quoteIdentifier($columnName);
-        $columnName = $tableName . '.' . $columnName;
-        if (!is_array($value)) {
-            $select->where($columnName . ' = ?', $value);
-        } else {
-            $expressions = array();
-            $inValues = array();
-
-            foreach ($value as $val) {
-                if ($val === null) {
-                    $expressions['null'] = $columnName . ' IS NULL';
-                } else {
-                    $inValues[] = $this->getAdapter()->quoteInto('?', $val);
-                }
-            }
-
-            if (!empty($inValues)) {
-                $expressions['in'] = $columnName . ' IN ('.implode(',', $inValues).')';
-            }
-
-            $select->where(implode(' OR ', $expressions));
-        }
-
-        return $this->fetchAll($select);
+        return $this->findByColumnValues(array($column, $value), $select);
     }
     
     /**
