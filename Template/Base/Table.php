@@ -90,7 +90,7 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
      */
     public function findByColumnValue($column, $value, Zend_Db_Select $select = null)
     {
-        return $this->findByColumnValues(array($column, $value), $select);
+        return $this->findByColumnValues(array($column => $value), $select);
     }
     
     /**
