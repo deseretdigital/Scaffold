@@ -80,19 +80,20 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
 
     /**
      * Retrieve Rowset from table where $columnName matches $value
-     * 
-     * @deprecated
+     *
+     * @deprecated Use findByColumnValues instead
+     *
      * @param string $columnName
      * @param string|number|null $value
      * @param Zend_Db_Select|Zend_Db_Table_Select|null OPTIONAL $select
      *
      * @return Zend_Db_Table_Rowset_Abstract
      */
-    public function findByColumnValue($column, $value, Zend_Db_Select $select = null)
+    public function findByColumnValue($columnName, $value, Zend_Db_Select $select = null)
     {
-        return $this->findByColumnValues(array($column => $value), $select);
+        return $this->findByColumnValues(array($columnName => $value), $select);
     }
-    
+
     /**
      * Finds records by multiple columns
      * @param array $columnsAndValues key is the column and value is either null, an array of values, or a single value
@@ -105,19 +106,19 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
         if ($select === null) {
             $select = $this->select();
         }
-    
+
         // set from
         $select->from($this);
-    
+
         // set where for each column
         foreach ($columnsAndValues as $column => $value) {
             $conditions = $this->_buildColumnConditions($column, $value);
             $select->where($conditions);
         }
-    
+
         return $this->fetchAll($select);
     }
-    
+
     /**
      * Used internally to build column conditions for select, update, delete
      * @param string $column
@@ -128,30 +129,24 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
     {
         $adapter = $this->getAdapter();
         $columnName = $adapter->quoteIdentifier($this->_name) . '.' . $adapter->quoteIdentifier($column);
-    
+
         if ($value === null) {
-    
             $conditions = $columnName . ' IS NULL';
-    
         } elseif (is_array($value)) {
-    
             $inValues = array_diff($value, array(null));
-    
+
             if (count($inValues) < count($value)) {
                 $conditions['null'] = $columnName . ' IS NULL';
             }
-    
+
             $inValues = array_map(array($adapter, 'quote'), $inValues);
             $conditions['in'] = $columnName . ' IN (' . implode(',', $inValues) . ')';
-    
+
             $conditions = implode(' OR ', $conditions);
-    
         } else {
-    
             $conditions = $adapter->quoteInto($columnName . ' = ?', $value);
-    
         }
-    
+
         return $conditions;
     }
 }
