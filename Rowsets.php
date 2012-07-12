@@ -805,7 +805,13 @@ if ($value === true || $value == 1 || $value === \'true\' || $value === \'TRUE\'
 
             // Cast the value to the correct type
             if ($autocast) {
-                if ($column['IS_NULLABLE'] == 'YES' || $this->isColumnAutoIncrement($column)) {
+                // Auto Increments set to a blank string need to be ignored
+                if ($this->isColumnAutoIncrement($column)) {
+                    $setBody .= '
+if (!empty($value)) {
+    $value = ('.$columnType.') $value;
+}'."\n";
+                } else if ($column['IS_NULLABLE'] == 'YES') {
                     $setBody .= '
 if ($value !== null) {
     $value = ('.$columnType.') $value;
