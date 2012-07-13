@@ -807,7 +807,7 @@ if ($value === true || $value == 1 || $value === \'true\' || $value === \'TRUE\'
                 $autocast = false;
                 $setBody .= '
 if (!is_int($value) && $value !== null) {
-    throw new Zend_Db_Table_Row_Exception(\'Auto increment key '.$table['TABLE_NAME'].'.'.$column.' can only be set to an integer or null!\');
+    throw new Zend_Db_Table_Row_Exception(\'Auto increment key '.$table['TABLE_NAME'].'.'.$column['COLUMN_NAME'].' can only be set to an integer or null!\');
 }
 ';
             }
