@@ -803,15 +803,18 @@ if ($value === true || $value == 1 || $value === \'true\' || $value === \'TRUE\'
                 }
             }
 
+            if ($this->isColumnAutoIncrement($column)) {
+                $autocast = false;
+                $setBody .= '
+if (!is_int($value) && $value !== null) {
+    throw new Zend_Db_Table_Row_Exception(\'Auto increment key '.$table['TABLE_NAME'].'.'.$column.' can only be set to an integer or null!\');
+}
+';
+            }
+
             // Cast the value to the correct type
             if ($autocast) {
-                // Auto Increments set to a blank string need to be ignored
-                if ($this->isColumnAutoIncrement($column)) {
-                    $setBody .= '
-if (!empty($value)) {
-    $value = ('.$columnType.') $value;
-}'."\n";
-                } else if ($column['IS_NULLABLE'] == 'YES') {
+                if ($column['IS_NULLABLE'] == 'YES') {
                     $setBody .= '
 if ($value !== null) {
     $value = ('.$columnType.') $value;
