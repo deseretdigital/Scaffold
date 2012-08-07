@@ -49,15 +49,40 @@ abstract class DDM_Scaffold_Template_Base_Rowset extends Zend_Db_Table_Rowset_Ab
      */
     public function filterBy($columnName, $value)
     {
-        // Call through the getter so we can use custom columns that
-        // may not be present in the actual database
-        $getter = $this->getFunctionName('get_' . $columnName);
+        return $this->filterByArray(
+            array(
+                $columnName => $value,
+            )
+        );
+    }
+
+    /**
+     * Filters a rowset by a an array of column names and values
+     *
+     * @param array $filterColumns Key is column name. Value is column value.
+     *
+     * @return Zend_Db_Table_Rowset_Abstract
+     */
+    public function filterByArray(array $filterColumns)
+    {
         $rowset = $this->getTable()->createRowset();
         foreach ($this as $row) {
-            if ($row->$getter() == $value) {
+            $rowMatches = true;
+            foreach ($filterColumns as $filterColumn => $value) {
+                // Call through the getter so we can use custom columns that
+                // may not be present in the actual database
+                $getter = $this->getFunctionName('get_' . $filterColumn);
+                if ($row->$getter() != $value) {
+                    $rowMatches = false;
+                    break;
+                }
+            }
+
+            if ($rowMatches) {
                 $rowset->addRow($row);
             }
         }
+
         return $rowset;
     }
 
