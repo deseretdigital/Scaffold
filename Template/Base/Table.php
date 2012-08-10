@@ -102,6 +102,8 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
      */
     public function findByColumnValues(array $columnsAndValues, Zend_Db_Select $select = null)
     {
+        $columnsAndValues = array_intersect_key($columnsAndValues, array_flip($this->_getCols()));
+
         // make sure we have select
         if ($select === null) {
             $select = $this->select();
