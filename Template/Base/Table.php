@@ -8,6 +8,12 @@
  */
 abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
 {
+    /**
+     * Default number of items per page (used for pagination).
+     *
+     * @var int Default the number of items per page
+     */
+    CONST DEFAULT_PAGE_SIZE = 12;
 
     /**
      * The table metadata has been cached
@@ -23,6 +29,82 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
      * @var string
      */
     protected $_defaultSource = self::DEFAULT_CLASS;
+
+    /**
+     * Paginator class name.
+     *
+     * @var string
+     */
+    protected $paginatorClass = 'Zend_Paginator';
+
+    /**
+     * Paginates a select query
+     *
+     * @param Zend_Db_Table_Select_Abstract $select
+     * @param array $options Options that contain page and page_size
+     *
+     * @return Zend_Db_Table_Rowset_Abstract
+     */
+    protected function paginate(Zend_Db_Table_Select $select, array $options = array())
+    {
+        $pageDefaults = array(
+            'page' => 1,
+            'page_size' => self::DEFAULT_PAGE_SIZE,
+        );
+
+        $options = array_merge($pageDefaults, $options);
+
+        $paginator = $this->getPaginator($select);
+        $paginator->setItemCountPerPage($options['page_size']);
+        $paginator->setCurrentPageNumber($options['page']);
+
+        $rowset = $paginator->getCurrentItems();
+        $rowset->setTotalCount($paginator->getTotalItemCount());
+        $rowset->setCurrentPage($paginator->getCurrentPageNumber());
+        $rowset->setPageSize($paginator->getItemCountPerPage());
+
+        return $rowset;
+    }
+
+    /**
+     * Sets paginator class name.
+     *
+     * @param string $paginatorClass
+     */
+    protected function setPaginatorClass($paginatorClass)
+    {
+        $this->paginatorClass = $paginatorClass;
+    }
+
+    /**
+     * Returns paginator instance.
+     *
+     * @param mixed $data
+     *
+     * @return Zend_Paginator
+     */
+    protected function getPaginator($data)
+    {
+        $paginatorClass = (empty($this->paginatorClass)) ? $this->paginatorClass : 'Zend_Paginator';
+        return $paginatorClass::factory($data);
+    }
+
+    /**
+     * Returns rowset containing all rows.
+     *
+     * @param array $options
+     *
+     * @return Zend_Db_Table_Rowset_Abstract
+     */
+    public function findAll(array $options = array())
+    {
+        $select = $this->select();
+        $select->from($this);
+        if (array_key_exists('pagination', $options)) {
+            return $this->paginate($select, $options['pagination']);
+        }
+        return $this->fetchAll($select);
+    }
 
     /**
      * Returns the schema of the table
@@ -86,23 +168,29 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
      * @param string $columnName
      * @param string|number|null $value
      * @param Zend_Db_Select|Zend_Db_Table_Select|null OPTIONAL $select
+     * @param array $options
      *
      * @return Zend_Db_Table_Rowset_Abstract
      */
-    public function findByColumnValue($columnName, $value, Zend_Db_Select $select = null)
+    public function findByColumnValue($columnName, $value, Zend_Db_Select $select = null, array $options = array())
     {
-        return $this->findByColumnValues(array($columnName => $value), $select);
+        return $this->findByColumnValues(array($columnName => $value), $select, $options);
     }
 
     /**
      * Finds records by multiple columns
      * @param array $columnsAndValues key is the column and value is either null, an array of values, or a single value
      * @param Zend_Db_Select $select
+     * @param array $options
+     *
      * @return Zend_Db_Table_Rowset_Abstract
      */
-    public function findByColumnValues(array $columnsAndValues, Zend_Db_Select $select = null)
+    public function findByColumnValues(array $columnsAndValues, Zend_Db_Select $select = null, array $options = array())
     {
         $select = $this->findByColumnValuesSelect($columnsAndValues, $select);
+        if (array_key_exists('pagination', $options)) {
+            return $this->paginate($select, $options['pagination']);
+        }
         return $this->fetchAll($select);
     }
 
@@ -138,7 +226,8 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
      * Used internally to build column conditions for select, update, delete
      * @param string $column
      * @param mixed $value
-     * return string
+     *
+     * @return string
      */
     protected function _buildColumnConditions($column, $value)
     {

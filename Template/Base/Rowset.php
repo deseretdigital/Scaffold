@@ -16,6 +16,131 @@ abstract class DDM_Scaffold_Template_Base_Rowset extends Zend_Db_Table_Rowset_Ab
     protected $_functionNameFilter = null;
 
     /**
+     * Holds the total count when the rowset is only a subset of a larger set of
+     * rows (used for pagination).
+     *
+     * @var int
+     */
+    protected $totalCount;
+
+    /**
+     * Current page when the rowset is only a subset of a larger set of
+     * rows (used for pagination).
+     *
+     * @var int
+     */
+    protected $currentPage;
+
+    /**
+     * Page size when the rowset is only a subset of a larger set of
+     * rows (used for pagination).
+     *
+     * @var int
+     */
+    protected $pageSize;
+
+    /**
+     * Checks to see if the rowset is paginated.
+     *
+     * @return boolean
+     */
+    public function isPaginated()
+    {
+        return $this->getTotalCount() > count($this);
+    }
+
+    /**
+     * Gets the total count when the rowset is only a subset of a larger set of
+     * rows (used for pagination). If the total count has not been set, this
+     * will return the count of current rows.
+     *
+     * @return int
+     */
+    public function getTotalCount()
+    {
+        if ($this->totalCount === null) {
+            return count($this);
+        }
+        return $this->totalCount;
+    }
+
+    /**
+     * Sets the total count when the rowset is only a subset of a larger set of
+     * rows (used for pagination).
+     *
+     * @param int $count
+     */
+    public function setTotalCount($count)
+    {
+        $this->totalCount = (int)$count;
+    }
+
+    /**
+     * Returns the current page of the rowset (used for pagination).
+     *
+     * @return int
+     */
+    public function getCurrentPage()
+    {
+        if ($this->currentPage === null) {
+            return 1;
+        }
+        return $this->currentPage;
+    }
+
+    /**
+     * Sets the current page of the rowset (used for pagination).
+     *
+     * @param int $page
+     */
+    public function setCurrentPage($page)
+    {
+        $this->currentPage = (int) $page;
+    }
+
+    /**
+     * Gets the size of each page (used for pagination).
+     *
+     * @return int
+     */
+    public function getPageSize()
+    {
+        if (!$this->isPaginated()) {
+            return count($this);
+        }
+
+        if ($this->currentPage === null) {
+            return Generated_Base_Table::DEFAULT_PAGE_SIZE;
+        }
+
+        return $this->pageSize;
+    }
+
+    /**
+     * Sets the size of each page
+     *
+     * @param int $pageSize
+     */
+    public function setPageSize($pageSize)
+    {
+        $this->pageSize = (int) $pageSize;
+    }
+
+    /**
+     * Calculates the total number of pages for a rowset
+     *
+     * @return int
+     */
+    public function getTotalPages()
+    {
+        if ($this->getPageSize() == 0) {
+            return 0;
+        }
+
+        return ceil($this->getTotalCount() / $this->getPageSize());
+    }
+
+    /**
      * Groups a rowset by a specified columnName
      *
      * @param string $columnName

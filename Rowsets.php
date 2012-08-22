@@ -268,9 +268,13 @@ class DDM_Scaffold_Rowsets extends DDM_Scaffold_Abstract {
                         'defaultValue' => null,
                         'type' => 'Zend_Db_Select',
                     ),
+                    array(
+                        'name' => 'options',
+                        'defaultValue' => array()
+                    ),
                 ),
                 'body' => '
-return $this->findByColumnValues(array(\''.$indexes['COLUMN_NAME'].'\' => $value), $select);
+return $this->findByColumnValues(array(\''.$indexes['COLUMN_NAME'].'\' => $value), $select, $options);
                 ',
                 'docblock' => new Zend_CodeGenerator_Php_Docblock(array(
                     'shortDescription' => 'Gets a Rowset from ' . $indexes['TABLE_NAME'] . ' by ' . $indexes['COLUMN_NAME'],
@@ -282,6 +286,11 @@ return $this->findByColumnValues(array(\''.$indexes['COLUMN_NAME'].'\' => $value
                         new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
                             'paramName' => 'select',
                             'datatype' => 'Zend_Db_Select|Zend_Db_Table_Select|null',
+                            'description' => 'OPTIONAL'
+                        )),
+                        new Zend_CodeGenerator_Php_Docblock_Tag_Param(array(
+                            'paramName' => 'options',
+                            'datatype' => 'array',
                             'description' => 'OPTIONAL'
                         )),
                         new Zend_CodeGenerator_Php_Docblock_Tag_Return(array(
