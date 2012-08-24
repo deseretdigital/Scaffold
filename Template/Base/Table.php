@@ -35,7 +35,7 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
      *
      * @var string
      */
-    protected $paginatorClass = 'Zend_Paginator';
+    protected $_paginatorClass = 'Zend_Paginator';
 
     /**
      * Paginates a select query
@@ -73,7 +73,7 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
      */
     protected function setPaginatorClass($paginatorClass)
     {
-        $this->paginatorClass = $paginatorClass;
+        $this->_paginatorClass = $paginatorClass;
     }
 
     /**
@@ -85,25 +85,8 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
      */
     protected function getPaginator($data)
     {
-        $paginatorClass = (empty($this->paginatorClass)) ? $this->paginatorClass : 'Zend_Paginator';
+        $paginatorClass = (empty($this->_paginatorClass)) ? $this->_paginatorClass : 'Zend_Paginator';
         return $paginatorClass::factory($data);
-    }
-
-    /**
-     * Returns rowset containing all rows.
-     *
-     * @param array $options
-     *
-     * @return Zend_Db_Table_Rowset_Abstract
-     */
-    public function findAll(array $options = array())
-    {
-        $select = $this->select();
-        $select->from($this);
-        if (array_key_exists('pagination', $options)) {
-            return $this->paginate($select, $options['pagination']);
-        }
-        return $this->fetchAll($select);
     }
 
     /**
@@ -158,6 +141,23 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
             $rowset->setFromArray($data);
         }
         return $rowset;
+    }
+
+    /**
+     * Returns rowset containing all rows.
+     *
+     * @param array $options
+     *
+     * @return Zend_Db_Table_Rowset_Abstract
+     */
+    public function findAll(array $options = array())
+    {
+        $select = $this->select();
+        $select->from($this);
+        if (array_key_exists('pagination', $options)) {
+            return $this->paginate($select, $options['pagination']);
+        }
+        return $this->fetchAll($select);
     }
 
     /**
