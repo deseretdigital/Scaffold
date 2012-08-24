@@ -110,7 +110,7 @@ abstract class DDM_Scaffold_Template_Base_Rowset extends Zend_Db_Table_Rowset_Ab
         }
 
         if ($this->currentPage === null) {
-            return Generated_Base_Table::DEFAULT_PAGE_SIZE;
+            return $this->getTable()->getDefaultPageSize();
         }
 
         return $this->pageSize;

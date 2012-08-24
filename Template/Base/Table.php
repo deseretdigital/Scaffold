@@ -13,7 +13,7 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
      *
      * @var int Default the number of items per page
      */
-    CONST DEFAULT_PAGE_SIZE = 12;
+    protected $defaultPageSize = 12;
 
     /**
      * The table metadata has been cached
@@ -49,7 +49,7 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
     {
         $pageDefaults = array(
             'page' => 1,
-            'page_size' => self::DEFAULT_PAGE_SIZE,
+            'page_size' => $this->defaultPageSize,
         );
 
         $options = array_merge($pageDefaults, $options);
@@ -64,6 +64,16 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
         $rowset->setPageSize($paginator->getItemCountPerPage());
 
         return $rowset;
+    }
+
+    /**
+     * Returns default page size for pagination.
+     *
+     * @return int
+     */
+    public function getDefaultPageSize()
+    {
+        return $this->defaultPageSize;
     }
 
     /**
