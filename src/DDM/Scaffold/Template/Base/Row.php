@@ -191,11 +191,16 @@ abstract class DDM_Scaffold_Template_Base_Row extends Zend_Db_Table_Row_Abstract
     /**
      * Returns the rows primary key fields
      *
+     * @deprecated use parent::getPrimaryKey instead
+     * @see parent::getPrimaryKey
+     *
+     * @param boolean $useDirty
+     *
      * @return array
      */
-    public function getPrimaryKeys()
+    public function getPrimaryKeys($useDirty = true)
     {
-        return $this->_getPrimaryKey();
+        return $this->getPrimaryKey($useDirty);
     }
 
     /**
@@ -267,7 +272,7 @@ abstract class DDM_Scaffold_Template_Base_Row extends Zend_Db_Table_Row_Abstract
      */
     public function findDependentRowset($dependentTable, $ruleKey = null, Zend_Db_Table_Select $select = null)
     {
-        if (in_array(null, $this->getPrimaryKeys(), true)) {
+        if (in_array(null, $this->getPrimaryKey(), true)) {
             if (is_string($dependentTable)) {
                 $dependentTable = $this->_getTableFromString($dependentTable);
             }

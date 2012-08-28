@@ -296,7 +296,7 @@ abstract class DDM_Scaffold_Template_Base_Rowset extends Zend_Db_Table_Rowset_Ab
         foreach ($this as $row) {
             $success = $row->delete();
             if(!$success) {
-                throw new Zend_Db_Table_Rowset_Exception('Row with the primary keys '.implode(',', $row->getPrimaryKeys()).' could not be deleted!');
+                throw new Zend_Db_Table_Rowset_Exception('Row with the primary keys '.implode(',', $row->getPrimaryKey()).' could not be deleted!');
             }
         }
         $this->reset();
@@ -408,7 +408,7 @@ abstract class DDM_Scaffold_Template_Base_Rowset extends Zend_Db_Table_Rowset_Ab
         $usePrimaryKey = count($this->getTable()->getPrimaryKeys()) == 1;
         foreach ($this as $row) {
             if ($usePrimaryKey) {
-                $keys = $row->getPrimaryKeys();
+                $keys = $row->getPrimaryKey();
                 $key = array_shift($keys);
                 if ($key === null) {
                     $key = uniqid('NULL_');
