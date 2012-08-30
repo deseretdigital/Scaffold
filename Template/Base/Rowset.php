@@ -313,6 +313,11 @@ abstract class DDM_Scaffold_Template_Base_Rowset extends Zend_Db_Table_Rowset_Ab
         $primaryKeys = $this->getTable()->getPrimaryKeys();
 
         foreach ($data as $datum) {
+            if (is_object($datum) && get_class($datum) == $this->_rowClass) {
+                $this->addRow($datum);
+                continue;
+            }
+
             $keys = array();
             foreach ($primaryKeys as $primaryKey) {
                 if (array_key_exists($primaryKey, $datum) && $datum[$primaryKey] !== null) {
@@ -330,6 +335,7 @@ abstract class DDM_Scaffold_Template_Base_Rowset extends Zend_Db_Table_Rowset_Ab
             $row->setFromArray($datum);
         }
         // This comment to fix bug in code generator - http://framework.zend.com/issues/browse/ZF-9501#comment-44390
+        // @TODO: Fixed in ZF 1.12.0. Remove when we upgrade to ZF 1.12.0
     }
 
     /**
@@ -338,26 +344,57 @@ abstract class DDM_Scaffold_Template_Base_Rowset extends Zend_Db_Table_Rowset_Ab
      * @param string $method
      * @param array $args
      *
-     * @return array
+     * @return mixed
      *
      * @throws Zend_Db_Table_Rowset_Exception If an invalid method is called.
      */
     public function __call($method, array $args)
     {
         if (strpos($method, 'get') === 0) {
-            $data = array();
-            foreach($this as $row) {
-                $data[] = $row->$method();
-            }
-            return $data;
+            return $this->getFromEachRow($method);
         } else if (strpos($method, 'set') === 0) {
-            foreach($this as $row) {
-                $row->$method($args[0]);
-            }
-            return;
+            return $this->setToEachRow($method, $args[0]);
         }
 
         throw new Zend_Db_Table_Rowset_Exception('Unrecognized method "'.$method.'()"');
+    }
+
+    /**
+     * Calls a method on each row and returns the result to an array
+     *
+     * @param string $method
+     *
+     * @return array|Zend_Db_Table_Rowset_Abstract
+     */
+    protected function getFromEachRow($method)
+    {
+        $data = array();
+        foreach ($this as $row) {
+            $data[] = $row->$method();
+        }
+
+        // If we're returning an array of row objects, return a rowset instead
+        if (count($data) > 0) {
+            $testRow = reset($data);
+            if ($testRow instanceof Generated_Base_Row) {
+                return $testRow->getTable()->createRowset($data);
+            }
+        }
+        return $data;
+    }
+
+    /**
+     * Calls a method on each row to set a value
+     *
+     * @param string $method
+     * @param mixed $value
+     */
+    protected function setToEachRow($method, $value)
+    {
+        foreach ($this as $row) {
+            $row->$method($value);
+        }
+        return;
     }
 
     /**
