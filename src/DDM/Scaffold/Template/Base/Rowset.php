@@ -334,8 +334,6 @@ abstract class DDM_Scaffold_Template_Base_Rowset extends Zend_Db_Table_Rowset_Ab
 
             $row->setFromArray($datum);
         }
-        // This comment to fix bug in code generator - http://framework.zend.com/issues/browse/ZF-9501#comment-44390
-        // @TODO: Fixed in ZF 1.12.0. Remove when we upgrade to ZF 1.12.0
     }
 
     /**
