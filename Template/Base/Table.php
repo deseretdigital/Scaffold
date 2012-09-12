@@ -220,12 +220,21 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
             $select = $this->select();
         }
 
-        // set from
-        $select->from($this);
+        // set from only if it hasn't been set yet for this table
+        $tableAlias = null;
+        $fromParts = $select->getPart(Zend_Db_Select::FROM);
+        foreach ($fromParts as $alias => $fromPart) {
+            if ($fromPart['tableName'] == $this->_name) {
+                $tableAlias = $alias;
+            }
+        }
+        if ($tableAlias === null) {
+            $select->from($this);
+        }
 
         // set where for each column
         foreach ($columnsAndValues as $column => $value) {
-            $conditions = $this->_buildColumnConditions($column, $value);
+            $conditions = $this->_buildColumnConditions($column, $value, $tableAlias);
             $select->where($conditions);
         }
 
@@ -234,15 +243,20 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
 
     /**
      * Used internally to build column conditions for select, update, delete
+     *
      * @param string $column
      * @param mixed $value
+     * @param string $tableAlias
      *
      * @return string
      */
-    protected function _buildColumnConditions($column, $value)
+    protected function _buildColumnConditions($column, $value, $tableAlias)
     {
+        if ($tableAlias === null) {
+            $tableAlias = $this->_name;
+        }
         $adapter = $this->getAdapter();
-        $columnName = $adapter->quoteIdentifier($this->_name) . '.' . $adapter->quoteIdentifier($column);
+        $columnName = $adapter->quoteIdentifier($tableAlias) . '.' . $adapter->quoteIdentifier($column);
 
         if ($value === null) {
             $conditions = $columnName . ' IS NULL';
