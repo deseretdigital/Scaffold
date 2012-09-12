@@ -246,11 +246,11 @@ abstract class DDM_Scaffold_Template_Base_Table extends Zend_Db_Table_Abstract
      *
      * @param string $column
      * @param mixed $value
-     * @param string $tableAlias
+     * @param string $tableAlias OPTIONAL
      *
      * @return string
      */
-    protected function _buildColumnConditions($column, $value, $tableAlias)
+    protected function _buildColumnConditions($column, $value, $tableAlias = null)
     {
         if ($tableAlias === null) {
             $tableAlias = $this->_name;
