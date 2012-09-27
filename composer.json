@@ -1,0 +1,29 @@
+{
+    "name": "ddm/scaffold",
+    "type": "library",
+    "description": "Generates Table, Rowset, Row, and Form classes from MySQL Databases",
+    "keywords": [
+        "Deseret Digital",
+        "DDM",
+        "Scaffold"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Russell S. Ahlstrom",
+            "email": "rahlstrom@deseretdigital.com",
+            "homepage": "http://russell.ahlstromology.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.3",
+        "zendframework/zendframework1": "1.12.*"
+    },
+    "autoload": {
+        "psr-0": {
+            "DDM_Scaffold": "src/"
+        }
+    }
+}
+
